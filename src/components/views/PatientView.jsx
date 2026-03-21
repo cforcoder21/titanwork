@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Brain, CheckCircle2, Flame, Heart } from "lucide-react";
+import { AlertTriangle, Brain, CheckCircle2, Flame, Heart, X } from "lucide-react";
 import { DELHI_CENTER, EMERGENCY_TYPES } from "../../data/constants";
 import DispatchResult from "../ui/DispatchResult";
 import EmergencyMap from "../map/EmergencyMap";
@@ -222,6 +222,11 @@ function PatientView({
   const [pickupThreshold, setPickupThreshold] = useState(0.5);
 
   const routeProgress = Math.max(0, Math.min(1, sharedProgress || 0));
+  const mountProgressRef = useRef(routeProgress);
+
+  useEffect(() => {
+    mountProgressRef.current = routeProgress;
+  }, [activeDispatch?.incidentId]);
 
   const ensureAudioContext = () => {
     if (audioContextRef.current) return audioContextRef.current;
@@ -385,24 +390,26 @@ function PatientView({
     if (routeProgress >= pickupThreshold && pickupPopupIncidentRef.current !== activeDispatch.incidentId) {
       pickupPopupIncidentRef.current = activeDispatch.incidentId;
       setIsPatientOnboard(true);
-      setPickupNotifiedAt(formatTimeHms());
-      const popupDurationMs = randomInt(10, 15) * 1000;
-      setPickupPopupDurationMs(popupDurationMs);
-      setShowPickupPopup(true);
+      if (mountProgressRef.current < pickupThreshold) {
+        setPickupNotifiedAt(formatTimeHms());
+        const popupDurationMs = randomInt(10, 15) * 1000;
+        setPickupPopupDurationMs(popupDurationMs);
+        setShowPickupPopup(true);
 
-      if (pickupPopupHideTimerRef.current) {
-        clearTimeout(pickupPopupHideTimerRef.current);
-      }
-      if (pickupSoundStopRef.current) {
-        pickupSoundStopRef.current();
-      }
+        if (pickupPopupHideTimerRef.current) {
+          clearTimeout(pickupPopupHideTimerRef.current);
+        }
+        if (pickupSoundStopRef.current) {
+          pickupSoundStopRef.current();
+        }
 
-      unlockAudioContext();
-      pickupSoundStopRef.current = startAmbulanceSiren(ensureAudioContext(), 5000);
-      pickupPopupHideTimerRef.current = setTimeout(() => {
-        setShowPickupPopup(false);
-        pickupPopupHideTimerRef.current = null;
-      }, popupDurationMs);
+        unlockAudioContext();
+        pickupSoundStopRef.current = startAmbulanceSiren(ensureAudioContext(), 5000);
+        pickupPopupHideTimerRef.current = setTimeout(() => {
+          setShowPickupPopup(false);
+          pickupPopupHideTimerRef.current = null;
+        }, popupDurationMs);
+      }
     }
 
     return undefined;
@@ -413,17 +420,19 @@ function PatientView({
 
     if (routeProgress >= 1 && arrivalPopupIncidentRef.current !== activeDispatch.incidentId) {
       arrivalPopupIncidentRef.current = activeDispatch.incidentId;
-      setArrivalNotifiedAt(formatTimeHms());
-      setShowArrivalPopup(true);
+      if (mountProgressRef.current < 1) {
+        setArrivalNotifiedAt(formatTimeHms());
+        setShowArrivalPopup(true);
 
-      if (arrivalPopupHideTimerRef.current) {
-        clearTimeout(arrivalPopupHideTimerRef.current);
+        if (arrivalPopupHideTimerRef.current) {
+          clearTimeout(arrivalPopupHideTimerRef.current);
+        }
+
+        arrivalPopupHideTimerRef.current = setTimeout(() => {
+          setShowArrivalPopup(false);
+          arrivalPopupHideTimerRef.current = null;
+        }, 10000);
       }
-
-      arrivalPopupHideTimerRef.current = setTimeout(() => {
-        setShowArrivalPopup(false);
-        arrivalPopupHideTimerRef.current = null;
-      }, 10000);
     }
 
     return undefined;
@@ -578,8 +587,18 @@ function PatientView({
           />
 
           {showPickupPopup && activeDispatch ? (
-            <div className="pointer-events-none absolute right-4 top-4 z-30 w-[360px] animate-slide-up rounded-2xl border border-green-500/70 bg-navy-950/95 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
-              <div className="mb-2 flex items-center gap-2">
+            <div className="pointer-events-auto absolute right-4 top-4 z-30 w-[360px] animate-slide-up rounded-2xl border border-green-500/70 bg-navy-950/95 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
+              <button
+                type="button"
+                className="absolute right-3 top-3 text-slate-400 hover:text-white transition-colors"
+                onClick={() => {
+                  setShowPickupPopup(false);
+                  if (pickupSoundStopRef.current) pickupSoundStopRef.current();
+                }}
+              >
+                <X size={14} />
+              </button>
+              <div className="mb-2 pr-4 flex items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500/20 text-green-400">
                   <CheckCircle2 size={16} />
                 </span>
@@ -600,11 +619,18 @@ function PatientView({
 
           {showArrivalPopup && activeDispatch ? (
             <div
-              className={`pointer-events-none absolute right-4 z-30 w-[360px] animate-slide-up rounded-2xl border border-blue-400/70 bg-navy-950/95 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md ${
+              className={`pointer-events-auto absolute right-4 z-30 w-[360px] animate-slide-up rounded-2xl border border-blue-400/70 bg-navy-950/95 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md ${
                 showPickupPopup ? "top-44" : "top-4"
               }`}
             >
-              <div className="mb-2 flex items-center gap-2">
+              <button
+                type="button"
+                className="absolute right-3 top-3 text-slate-400 hover:text-white transition-colors"
+                onClick={() => setShowArrivalPopup(false)}
+              >
+                <X size={14} />
+              </button>
+              <div className="mb-2 pr-4 flex items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/20 text-blue-300">
                   <CheckCircle2 size={16} />
                 </span>

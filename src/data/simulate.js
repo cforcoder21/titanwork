@@ -78,7 +78,12 @@ export const ambulances = [
 export const hospitals = [
   { id: 1, name: "SMS Hospital Jaipur", lat: 26.9056, lng: 75.8137, beds: 18, icuBeds: 4, erBays: 3, incoming: 2 },
   { id: 2, name: "Fortis Escorts Jaipur", lat: 26.8736, lng: 75.7812, beds: 15, icuBeds: 3, erBays: 2, incoming: 1 },
-  { id: 3, name: "RUHS Jaipur", lat: 26.8392, lng: 75.8059, beds: 21, icuBeds: 5, erBays: 4, incoming: 2 }
+  { id: 3, name: "RUHS Jaipur", lat: 26.8392, lng: 75.8059, beds: 21, icuBeds: 5, erBays: 4, incoming: 2 },
+  { id: 4, name: "Mahatma Gandhi Hospital", lat: 26.7725, lng: 75.8365, beds: 25, icuBeds: 8, erBays: 5, incoming: 0 },
+  { id: 5, name: "Narayana Multispeciality", lat: 26.8049, lng: 75.8233, beds: 12, icuBeds: 2, erBays: 2, incoming: 0 },
+  { id: 6, name: "Apex Hospital", lat: 26.8533, lng: 75.8223, beds: 10, icuBeds: 3, erBays: 1, incoming: 1 },
+  { id: 7, name: "Sanjeevani Hospital", lat: 26.8856, lng: 75.7674, beds: 8, icuBeds: 1, erBays: 2, incoming: 0 },
+  { id: 8, name: "Monilek Hospital", lat: 26.8839, lng: 75.8213, beds: 14, icuBeds: 4, erBays: 2, incoming: 0 }
 ];
 
 export const incidents = [];

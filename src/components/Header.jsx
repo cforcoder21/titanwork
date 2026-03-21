@@ -1,4 +1,4 @@
-import { Cross, Moon, Play, Siren, Square, Sun } from "lucide-react";
+import { Cross, Moon, Siren, Sun } from "lucide-react";
 import { useClock } from "../hooks/useClock";
 
 function Header({ theme, onToggleTheme, demoMode, onToggleDemoMode, onQuickDispatch, currentView, viewIndex, demoTick }) {
@@ -25,18 +25,6 @@ function Header({ theme, onToggleTheme, demoMode, onToggleDemoMode, onQuickDispa
           >
             <Siren size={13} />
             QUICK INCIDENT
-          </button>
-          <button
-            type="button"
-            onClick={onToggleDemoMode}
-            className={`flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] font-display tracking-widest transition-colors ${
-              demoMode
-                ? "border-green-500 bg-green-500/10 text-green-400 hover:bg-green-500/20"
-                : "border-slate-600 bg-navy-800 text-slate-300 hover:border-slate-500"
-            }`}
-          >
-            {demoMode ? <Square size={12} /> : <Play size={12} />}
-            {demoMode ? "STOP DEMO" : "START DEMO"}
           </button>
           <button
             type="button"

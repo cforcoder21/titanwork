@@ -320,3 +320,33 @@ body.theme-light .bg-red-glow {
 body.theme-light .shadow-\[0_0_12px_rgba\(239\,68\,68\,0\.2\)\] {
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.2) !important;
 }
+
+/* --- BOUNCY UI ENHANCEMENTS --- */
+button {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.3s ease,
+              border-color 0.3s ease,
+              color 0.3s ease !important;
+  will-change: transform;
+}
+
+button:hover:not(:disabled) {
+  transform: scale(1.04) translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.95) !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* Card hover bounciness for components with border */
+section.border, div.rounded-xl.border, div.rounded-lg.border {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
+}
+
+section.border:hover, div.rounded-xl.border:hover, div.rounded-lg.border:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
+}

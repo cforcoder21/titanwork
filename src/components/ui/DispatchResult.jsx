@@ -47,15 +47,15 @@ function DispatchResult({ dispatch, remainingSeconds }) {
         <button
           type="button"
           onClick={() => setShowContacts((prev) => !prev)}
-          className="mt-3 w-full rounded-md border border-blue-400/70 bg-blue-500/15 px-3 py-2 font-display text-xs font-semibold tracking-wider text-blue-200 transition-colors hover:bg-blue-500/25"
+          className="mt-3 w-full rounded-md border border-blue-500 bg-blue-500/10 px-3 py-2 font-display text-xs font-bold tracking-wider text-blue-500 transition-colors hover:bg-blue-500/20"
         >
           {showContacts ? "HIDE CONTACTS" : "CONTACT THEM"}
         </button>
 
         {showContacts ? (
-          <div className="mt-2 rounded-md border border-navy-600 bg-navy-800/80 p-2 text-xs tracking-wide text-slate-200">
-            <p>Conductor: {dispatch.supportContacts?.conductor || "N/A"}</p>
-            <p className="mt-1">Medical Support: {dispatch.supportContacts?.medicalSupport || "N/A"}</p>
+          <div className="mt-3 rounded-md border border-navy-600 bg-navy-800 p-3 text-sm tracking-wide text-slate-300">
+            <p>Conductor: <span className="font-semibold text-slate-100">{dispatch.supportContacts?.conductor || "N/A"}</span></p>
+            <p className="mt-1.5">Medical Support: <span className="font-semibold text-slate-100">{dispatch.supportContacts?.medicalSupport || "N/A"}</span></p>
           </div>
         ) : null}
       </div>

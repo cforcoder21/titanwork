@@ -10,7 +10,7 @@ function statusClass(status) {
 function AmbulanceMarker({ unit, position }) {
   const icon = L.divIcon({
     className: "",
-    html: `<div class=\"amb-marker ${statusClass(unit.status)}\">AMB</div>`,
+    html: `<div class=\"amb-marker ${statusClass(unit.status)}\" style=\"font-size: 16px;\">🚑</div>`,
     iconSize: [34, 34],
     iconAnchor: [17, 17]
   });

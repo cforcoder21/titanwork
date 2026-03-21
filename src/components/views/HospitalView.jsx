@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { CheckCircle2, X } from "lucide-react";
 import CapacityBar from "../ui/CapacityBar";
 import EmergencyMap from "../map/EmergencyMap";
 import TriageCard from "../ui/TriageCard";
@@ -59,6 +60,63 @@ function formatTimestamp(ms) {
   const mm = String(d.getMinutes()).padStart(2, "0");
   const ss = String(d.getSeconds()).padStart(2, "0");
   return `${hh}:${mm}:${ss}`;
+}
+
+function startAmbulanceSiren(context, durationMs = 5000) {
+  if (!context) return () => {};
+
+  const durationSeconds = durationMs / 1000;
+  const now = context.currentTime;
+  const carrier = context.createOscillator();
+  const lfo = context.createOscillator();
+  const lfoGain = context.createGain();
+  const outputGain = context.createGain();
+
+  carrier.type = "sawtooth";
+  carrier.frequency.setValueAtTime(760, now);
+  lfo.type = "sine";
+  lfo.frequency.setValueAtTime(0.95, now);
+  lfoGain.gain.setValueAtTime(300, now);
+
+  outputGain.gain.setValueAtTime(0.0001, now);
+  outputGain.gain.exponentialRampToValueAtTime(0.09, now + 0.08);
+  outputGain.gain.exponentialRampToValueAtTime(0.0001, now + durationSeconds);
+
+  lfo.connect(lfoGain);
+  lfoGain.connect(carrier.frequency);
+  carrier.connect(outputGain);
+  outputGain.connect(context.destination);
+
+  carrier.start(now);
+  lfo.start(now);
+  carrier.stop(now + durationSeconds + 0.05);
+  lfo.stop(now + durationSeconds + 0.05);
+
+  return () => {
+    try {
+      carrier.stop();
+      lfo.stop();
+    } catch {}
+    carrier.disconnect();
+    lfo.disconnect();
+    lfoGain.disconnect();
+    outputGain.disconnect();
+  };
+}
+
+function formatTimeHms(date = new Date()) {
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
+function pickupRatioFromRoute(route) {
+  if (!route || route.length < 3) return 0.5;
+  const legOne = Math.hypot(route[1][0] - route[0][0], route[1][1] - route[0][1]);
+  const legTwo = Math.hypot(route[2][0] - route[1][0], route[2][1] - route[1][1]);
+  const total = legOne + legTwo;
+  return total === 0 ? 0.5 : legOne / total;
 }
 
 const priorityStyles = {
@@ -193,6 +251,86 @@ function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch,
   const [resolvedActiveRoute, setResolvedActiveRoute] = useState([]);
   const [showHospitalList, setShowHospitalList] = useState(false);
 
+  const [pickupNotificationDone, setPickupNotificationDone] = useState(false);
+  const [arrivalNotificationDone, setArrivalNotificationDone] = useState(false);
+  const [showPickupPopup, setShowPickupPopup] = useState(false);
+  const [showArrivalPopup, setShowArrivalPopup] = useState(false);
+  const [pickupNotifiedAt, setPickupNotifiedAt] = useState("");
+  const [arrivalNotifiedAt, setArrivalNotifiedAt] = useState("");
+  const audioContextRef = useRef(null);
+  const pickupSoundStopRef = useRef(null);
+
+  const routeProgress = Math.max(0, Math.min(1, sharedProgress || 0));
+  const mountProgressRef = useRef(routeProgress);
+
+  useEffect(() => {
+    mountProgressRef.current = routeProgress;
+  }, [activeDispatch?.incidentId]);
+
+  const ensureAudioContext = () => {
+    if (audioContextRef.current) return audioContextRef.current;
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) return null;
+    audioContextRef.current = new AudioContextCtor();
+    return audioContextRef.current;
+  };
+
+  const unlockAudioContext = () => {
+    const context = ensureAudioContext();
+    if (!context) return;
+    if (context.state === "suspended") {
+      context.resume().catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    const onFirstInteraction = () => unlockAudioContext();
+    window.addEventListener("pointerdown", onFirstInteraction, { once: true });
+    return () => window.removeEventListener("pointerdown", onFirstInteraction);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pickupSoundStopRef.current) pickupSoundStopRef.current();
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setPickupNotificationDone(false);
+    setArrivalNotificationDone(false);
+    setShowPickupPopup(false);
+    setShowArrivalPopup(false);
+  }, [activeDispatch?.incidentId]);
+
+  useEffect(() => {
+    if (!activeDispatch?.incidentId) return undefined;
+    const activeRouteMap = resolvedActiveRoute.length > 1 ? resolvedActiveRoute : activeDispatch?.route;
+    const threshold = pickupRatioFromRoute(activeRouteMap);
+    
+    if (routeProgress >= threshold && !pickupNotificationDone) {
+      setPickupNotificationDone(true);
+      if (mountProgressRef.current < threshold) {
+        setPickupNotifiedAt(formatTimeHms());
+        setShowPickupPopup(true);
+        unlockAudioContext();
+        pickupSoundStopRef.current = startAmbulanceSiren(ensureAudioContext(), 5000);
+        setTimeout(() => setShowPickupPopup(false), 12000);
+      }
+    }
+    if (routeProgress >= 1 && !arrivalNotificationDone) {
+      setArrivalNotificationDone(true);
+      if (mountProgressRef.current < 1) {
+        setArrivalNotifiedAt(formatTimeHms());
+        setShowArrivalPopup(true);
+        setTimeout(() => setShowArrivalPopup(false), 10000);
+      }
+    }
+  }, [routeProgress, sharedProgress, activeDispatch?.incidentId, resolvedActiveRoute, activeDispatch?.route, pickupNotificationDone, arrivalNotificationDone]);
+
   useEffect(() => {
     const activeRoute = activeDispatch?.route;
     if (!activeRoute?.length || activeRoute.length < 3) {
@@ -315,7 +453,7 @@ function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch,
 
       {/* MIDDLE: Map — takes remaining space */}
       <section
-        className="flex-1 min-w-0 min-h-0 overflow-hidden"
+        className="flex-1 min-w-0 min-h-0 overflow-hidden relative"
         style={{ height: "100%", maxHeight: "100%" }}
       >
         <EmergencyMap
@@ -329,6 +467,63 @@ function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch,
           trackedUnit={trackedAmbulance}
           theme={theme}
         />
+
+          {showPickupPopup && activeDispatch ? (
+            <div className="pointer-events-auto absolute right-4 top-4 z-30 w-[360px] animate-slide-up rounded-2xl border border-green-500/70 bg-navy-950/95 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
+              <button
+                type="button"
+                className="absolute right-3 top-3 text-slate-400 hover:text-white transition-colors"
+                onClick={() => {
+                  setShowPickupPopup(false);
+                  if (pickupSoundStopRef.current) pickupSoundStopRef.current();
+                }}
+              >
+                <X size={14} />
+              </button>
+              <div className="mb-2 pr-4 flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500/20 text-green-400">
+                  <CheckCircle2 size={16} />
+                </span>
+                <p className="font-display text-[11px] font-semibold tracking-[0.2em] text-green-400">PATIENT PICKUP CONFIRMED</p>
+              </div>
+              <p className="font-display text-sm font-semibold leading-relaxed text-slate-100">
+                {activeDispatch.ambulanceId} reached the patient and is now heading to {activeDispatch.hospitalName}.
+              </p>
+              <p className="mt-2 text-xs tracking-wider text-slate-400">TIME: {pickupNotifiedAt}</p>
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-navy-700">
+                <div
+                  className="h-full w-full origin-left bg-green-500/80"
+                  style={{ animation: `pickup-countdown 12000ms linear forwards` }}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {showArrivalPopup && activeDispatch ? (
+            <div
+              className={`pointer-events-auto absolute right-4 z-30 w-[360px] animate-slide-up rounded-2xl border border-blue-400/70 bg-navy-950/95 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md ${
+                showPickupPopup ? "top-44" : "top-4"
+              }`}
+            >
+              <button
+                type="button"
+                className="absolute right-3 top-3 text-slate-400 hover:text-white transition-colors"
+                onClick={() => setShowArrivalPopup(false)}
+              >
+                <X size={14} />
+              </button>
+              <div className="mb-2 pr-4 flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/20 text-blue-300">
+                  <CheckCircle2 size={16} />
+                </span>
+                <p className="font-display text-[11px] font-semibold tracking-[0.2em] text-blue-300">HOSPITAL ARRIVAL CONFIRMED</p>
+              </div>
+              <p className="font-display text-sm font-semibold leading-relaxed text-slate-100">
+                Patient has reached {activeDispatch.hospitalName} and is now under treatment.
+              </p>
+              <p className="mt-2 text-xs tracking-wider text-slate-400">TIME: {arrivalNotifiedAt}</p>
+            </div>
+          ) : null}
       </section>
 
       {/* RIGHT: Incident Log — shorter */}

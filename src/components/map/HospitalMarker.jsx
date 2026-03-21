@@ -4,7 +4,7 @@ import { Marker, Popup } from "react-leaflet";
 function HospitalMarker({ hospital }) {
   const icon = L.divIcon({
     className: "",
-    html: '<div class="hospital-marker">+</div>',
+    html: '<div class="hospital-marker" style="font-size: 16px;">🏥</div>',
     iconSize: [26, 26],
     iconAnchor: [13, 13]
   });
