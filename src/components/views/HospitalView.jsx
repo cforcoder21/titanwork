@@ -4,7 +4,7 @@ import CapacityBar from "../ui/CapacityBar";
 import EmergencyMap from "../map/EmergencyMap";
 import TriageCard from "../ui/TriageCard";
 import HospitalListModal from "../ui/HospitalListModal";
-import { DELHI_CENTER, TRIAGE_QUEUE } from "../../data/constants";
+import { DELHI_CENTER } from "../../data/constants";
 import { ambulances as ambulanceSeed } from "../../data/simulate";
 
 async function fetchRoadRoute(start, end) {
@@ -384,13 +384,33 @@ function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch,
       })()
     : null;
 
-  const incomingPatients = TRIAGE_QUEUE.map((patient, idx) => {
-    const incident = incidents[idx];
-    const unitName = incident?.assignedUnit || activeDispatch?.ambulanceId || `AMB-0${idx + 1}`;
-    const bay = `Bay ${idx + 1}`;
+  const incomingRecords = incidents.slice(0, 5).map((incident, idx) => {
+    const details = incident.patientDetails || "Unknown - Unknown 0";
+    const [conditionRaw, desc] = details.split(" - ");
+    const [genderRaw, ageRaw] = (desc || "Unknown 0").split(" ");
+    
+    const mins = String(Math.floor((incident.eta || 0) / 60)).padStart(2, "0");
+    const secs = String((incident.eta || 0) % 60).padStart(2, "0");
+    const formattedEta = `${mins}:${secs}`;
+
+    const priority = incident.priority || "P1";
+    const status = priority === "P1" ? "CRITICAL" : priority === "P2" ? "URGENT" : "STABLE";
+
+    const patient = {
+      id: incident.id,
+      priority,
+      condition: conditionRaw || "Emergency",
+      status,
+      age: parseInt(ageRaw) || 0,
+      gender: genderRaw || "U",
+      eta: formattedEta
+    };
+
+    const unitName = incident.assignedUnit || `AMB-0${(idx % 5) + 1}`;
+    const bay = `Bay ${(idx % 5) + 1}`;
     const ambulanceData = ambulanceSeed.find((a) => a.name === unitName);
-    const contact = incident?.patientContact || null;
-    return { patient, unit: unitName, bay, ambulanceData, contact };
+    const contact = incident.patientContact || null;
+    return { patient, unit: unitName, bay, ambulanceData, contact, incident };
   });
 
   const routeSet = activeRoute
@@ -432,17 +452,17 @@ function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch,
           <p className="mb-2 font-display text-xs tracking-widest text-slate-500">
             INCOMING UNITS
             <span className="ml-2 rounded-full bg-red-500/20 px-2 py-0.5 text-red-400">
-              {incomingPatients.length}
+              {incomingRecords.length}
             </span>
           </p>
           <div>
-            {incomingPatients.map(({ patient, unit, bay, ambulanceData, contact }) => (
+            {incomingRecords.map(({ patient, unit, bay, ambulanceData, contact, incident }) => (
               <IncomingUnitCard
                 key={patient.id}
                 patient={patient}
                 unit={unit}
                 bay={bay}
-                activeDispatch={activeDispatch}
+                activeDispatch={activeDispatch?.incidentId === incident.id ? activeDispatch : null}
                 patientPhone={contact}
                 ambulanceData={ambulanceData}
               />
@@ -530,8 +550,8 @@ function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch,
       <section className="flex w-[320px] shrink-0 min-h-0 flex-col rounded-xl border border-navy-700 bg-navy-800 p-5">
         <p className="mb-3 font-display text-xs tracking-widest text-slate-500">INCIDENT LOG</p>
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-          {TRIAGE_QUEUE.map((item) => (
-            <TriageCard key={item.id} item={item} />
+          {incomingRecords.map(({ patient }) => (
+            <TriageCard key={patient.id} item={patient} />
           ))}
         </div>
         <div className="mt-3 grid grid-cols-3 gap-3">
