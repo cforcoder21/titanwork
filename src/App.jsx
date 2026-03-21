@@ -33,13 +33,8 @@ function App() {
     handleSos(type);
   };
 
-  const toggleDemoMode = () => {
-    setDemoMode((prev) => !prev);
-  };
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  };
+  const toggleDemoMode = () => setDemoMode((prev) => !prev);
+  const toggleTheme = () => setTheme((prev) => (prev === "light" ? "dark" : "light"));
 
   useEffect(() => {
     document.body.classList.remove("theme-light", "theme-dark");
@@ -51,7 +46,6 @@ function App() {
       setLocationPrompt("Geolocation not supported in this browser");
       return;
     }
-
     setLocationPrompt("Capturing GPS location...");
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -71,19 +65,16 @@ function App() {
 
   useEffect(() => {
     if (!demoMode) return undefined;
-
     const viewRotationTimer = setInterval(() => {
       setActiveView((prev) => {
         const idx = VIEW_ORDER.indexOf(prev);
         return VIEW_ORDER[(idx + 1) % VIEW_ORDER.length];
       });
     }, 9000);
-
     const incidentTimer = setInterval(() => {
       triggerRandomIncident();
       setDemoTick((prev) => prev + 1);
     }, 18000);
-
     triggerRandomIncident();
     return () => {
       clearInterval(viewRotationTimer);
@@ -99,7 +90,6 @@ function App() {
             <p className="font-display text-xs tracking-widest text-red-500">WELCOME</p>
             <h2 className="mt-2 font-display text-2xl font-bold text-slate-100">Confirm Phone and GPS</h2>
             <p className="mt-1 text-sm text-slate-400">Enter your phone number and capture GPS location to continue.</p>
-
             <label className="mt-5 block">
               <span className="font-display text-xs tracking-widest text-slate-400">PHONE NUMBER</span>
               <input
@@ -110,7 +100,6 @@ function App() {
                 className="mt-2 w-full rounded-xl border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-slate-100 outline-none transition-colors focus:border-red-500"
               />
             </label>
-
             <button
               type="button"
               onClick={handleCaptureLocation}
@@ -118,9 +107,7 @@ function App() {
             >
               CAPTURE GPS LOCATION
             </button>
-
             <p className="mt-2 text-xs text-slate-500">{locationPrompt}</p>
-
             <button
               type="button"
               onClick={() => setIsOnboardingComplete(true)}
@@ -169,7 +156,14 @@ function App() {
         ) : null}
 
         {activeView === "hospital" ? (
-          <HospitalView ambulances={ambulances} hospitals={hospitals} incidents={incidents} theme={theme} />
+          <HospitalView
+            ambulances={ambulances}
+            hospitals={hospitals}
+            incidents={incidents}
+            theme={theme}
+            activeDispatch={activeDispatch}
+            patientPhone={phoneNumber}
+          />
         ) : null}
       </main>
     </div>

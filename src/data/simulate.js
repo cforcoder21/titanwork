@@ -146,10 +146,7 @@ export function findHospitalByBedAndRadius(incidentCoord, hospitalList) {
   );
 
   if (primaryBand.length) {
-    return {
-      hospital: primaryBand[0],
-      selectionBand: "0-15km"
-    };
+    return { hospital: primaryBand[0], selectionBand: "0-15km" };
   }
 
   const fallbackBand = hospitalsWithDistance.filter(
@@ -157,10 +154,7 @@ export function findHospitalByBedAndRadius(incidentCoord, hospitalList) {
   );
 
   if (fallbackBand.length) {
-    return {
-      hospital: fallbackBand[0],
-      selectionBand: "15-30km"
-    };
+    return { hospital: fallbackBand[0], selectionBand: "15-30km" };
   }
 
   return {
@@ -195,7 +189,8 @@ export function createIncidentRecord(type, unitList, hospitalList, incidentId, p
     pickupAddress: patientLocation
       ? `Live GPS (${incidentCoord.lat.toFixed(4)}, ${incidentCoord.lng.toFixed(4)})`
       : getRandomAddress(),
-    patientDetails: `${type.label} - Male 54`
+    patientDetails: `${type.label} - Male 54`,
+    patientContact: null  // set at dispatch time via useSimulation
   };
 
   return {

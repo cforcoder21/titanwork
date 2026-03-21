@@ -1,7 +1,9 @@
+import { useState } from "react";
 import CapacityBar from "../ui/CapacityBar";
 import EmergencyMap from "../map/EmergencyMap";
 import TriageCard from "../ui/TriageCard";
 import { TRIAGE_QUEUE } from "../../data/constants";
+import { ambulances as ambulanceSeed } from "../../data/simulate";
 
 function formatEta(seconds) {
   const mins = String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, "0");
@@ -9,23 +11,153 @@ function formatEta(seconds) {
   return `${mins}:${secs}`;
 }
 
-function HospitalView({ ambulances, hospitals, incidents, theme }) {
+function formatTimestamp(ms) {
+  if (!ms) return "--:--:--";
+  const d = new Date(ms);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
+const priorityStyles = {
+  P1: "border-red-500 bg-red-500/10",
+  P2: "border-amber-500 bg-amber-500/10",
+  P3: "border-slate-500 bg-slate-500/10",
+};
+
+const priorityBadgeStyles = {
+  P1: "bg-red-500/20 text-red-400 border-red-500/40",
+  P2: "bg-amber-500/20 text-amber-400 border-amber-500/40",
+  P3: "bg-slate-500/20 text-slate-300 border-slate-500/40",
+};
+
+const statusColors = {
+  CRITICAL: "text-red-400",
+  URGENT: "text-amber-400",
+  STABLE: "text-green-400",
+};
+
+function IncomingUnitCard({ patient, unit, bay, activeDispatch, patientPhone, ambulanceData }) {
+  const [showCrew, setShowCrew] = useState(false);
+  const style = priorityStyles[patient.priority] || priorityStyles.P3;
+  const badge = priorityBadgeStyles[patient.priority] || priorityBadgeStyles.P3;
+  const statusColor = statusColors[patient.status] || "text-slate-400";
+
+  const isLiveDispatch = activeDispatch && activeDispatch.ambulanceId === unit;
+  const crewData = isLiveDispatch ? {
+    driver: activeDispatch.driverName,
+    conductor: activeDispatch.conductorName,
+    medicalSupport: activeDispatch.medicalSupportName,
+    conductorContact: activeDispatch.supportContacts?.conductor,
+    medicalSupportContact: activeDispatch.supportContacts?.medicalSupport,
+  } : ambulanceData ? {
+    driver: ambulanceData.driver,
+    conductor: ambulanceData.conductor,
+    medicalSupport: ambulanceData.medicalSupport,
+    conductorContact: ambulanceData.conductorContact,
+    medicalSupportContact: ambulanceData.medicalSupportContact,
+  } : null;
+
+  const dispatchTime = isLiveDispatch ? formatTimestamp(activeDispatch.dispatchedAt) : "--:--:--";
+  const distanceKm = isLiveDispatch ? activeDispatch.distanceKm : null;
+  const routeBand = isLiveDispatch ? activeDispatch.hospitalDistanceBand : null;
+  const hospitalName = isLiveDispatch ? activeDispatch.hospitalName : null;
+
+  return (
+    <div className={`mb-3 rounded-lg border-l-4 bg-navy-700 p-3 ${style}`}>
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <p className="font-display text-sm font-semibold text-slate-100">
+          {patient.priority} — {patient.condition}
+        </p>
+        <span className={`shrink-0 rounded-full border px-2 py-0.5 font-display text-[10px] tracking-wider ${badge}`}>
+          {patient.priority}
+        </span>
+      </div>
+
+      <div className="mb-2 space-y-0.5">
+        <p className="text-xs text-slate-300">
+          👤 Patient Age: <span className="font-semibold text-white">{patient.age}</span>
+        </p>
+        <p className="text-xs text-slate-300">
+          📞 Patient Contact:{" "}
+          <span className="font-semibold text-white">{patientPhone || "Not provided"}</span>
+        </p>
+        <p className="text-xs text-slate-300">
+          🕐 Dispatch Time: <span className="font-semibold text-white">{dispatchTime}</span>
+        </p>
+        <p className="text-xs text-slate-300">
+          ⏱ ETA: <span className={`font-semibold ${statusColor}`}>{patient.eta}</span>
+        </p>
+      </div>
+
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <span className="rounded bg-navy-600 px-1.5 py-0.5 font-display text-[10px] text-slate-200">🚑 {unit}</span>
+        <span className="rounded bg-navy-600 px-1.5 py-0.5 font-display text-[10px] text-slate-200">📍 {bay}</span>
+        {distanceKm && (
+          <span className="rounded bg-navy-600 px-1.5 py-0.5 font-display text-[10px] text-slate-200">{distanceKm} km</span>
+        )}
+        {routeBand && (
+          <span className="rounded bg-navy-600 px-1.5 py-0.5 font-display text-[10px] text-slate-200">{routeBand}</span>
+        )}
+      </div>
+
+      {hospitalName && (
+        <p className="mb-2 text-xs text-slate-300">
+          🏥 <span className="font-semibold text-white">{hospitalName}</span>
+        </p>
+      )}
+
+      {crewData && (
+        <div className="mb-2 rounded-lg border border-navy-600 bg-navy-600 p-2">
+          <p className="mb-1.5 font-display text-[10px] tracking-widest text-slate-300">ONBOARD CREW</p>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-300">Driver: <span className="font-semibold text-white">{crewData.driver}</span></p>
+            <p className="text-xs text-slate-300">Conductor: <span className="font-semibold text-white">{crewData.conductor}</span></p>
+            <p className="text-xs text-slate-300">Medical: <span className="font-semibold text-white">{crewData.medicalSupport}</span></p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCrew((v) => !v)}
+            className="mt-2 w-full rounded border border-navy-500 py-1 text-center font-display text-[10px] tracking-wider text-slate-300 hover:border-blue-400 hover:text-blue-400 transition-colors"
+          >
+            {showCrew ? "HIDE CONTACTS" : "SHOW CONTACTS"}
+          </button>
+          {showCrew && (
+            <div className="mt-2 rounded bg-navy-800 p-2 space-y-1">
+              <p className="text-[10px] text-slate-300">Conductor: <span className="font-semibold text-white">{crewData.conductorContact}</span></p>
+              <p className="text-[10px] text-slate-300">Medical Support: <span className="font-semibold text-white">{crewData.medicalSupportContact}</span></p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          className="rounded border border-navy-600 px-2 py-1 text-xs text-slate-300 transition-colors hover:border-green-500 hover:text-green-400"
+        >
+          ASSIGN BAY
+        </button>
+        <span className={`font-display text-[10px] font-bold tracking-wider ${statusColor}`}>
+          {patient.status}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch }) {
   const primaryHospital = hospitals[0];
 
-  const incomingUnits = incidents.slice(0, 2).map((incident, idx) => ({
-    unit: incident.assignedUnit,
-    condition: incident.type.label,
-    eta: formatEta(incident.eta),
-    bay: `Bay ${idx + 1}`,
-    priority: incident.priority
-  }));
-
-  const fallbackIncoming = [
-    { unit: "AMB-03", condition: "Cardiac Arrest", eta: "05:10", bay: "Bay 1", priority: "P1" },
-    { unit: "AMB-02", condition: "Severe Trauma", eta: "08:45", bay: "Bay 2", priority: "P2" }
-  ];
-
-  const displayedIncoming = incomingUnits.length ? incomingUnits : fallbackIncoming;
+  const incomingPatients = TRIAGE_QUEUE.map((patient, idx) => {
+    const incident = incidents[idx];
+    const unitName = incident?.assignedUnit || activeDispatch?.ambulanceId || `AMB-0${idx + 1}`;
+    const bay = `Bay ${idx + 1}`;
+    const ambulanceData = ambulanceSeed.find((a) => a.name === unitName);
+    const contact = incident?.patientContact || null;
+    return { patient, unit: unitName, bay, ambulanceData, contact };
+  });
 
   const routeSet = incidents.slice(0, 3).flatMap((incident) => {
     const unit = ambulances.find((item) => item.name === incident.assignedUnit);
@@ -34,10 +166,12 @@ function HospitalView({ ambulances, hospitals, incidents, theme }) {
   });
 
   return (
-    <div className="flex h-[calc(100vh-6.5rem)] gap-4 p-4">
-
-      {/* LEFT: Hospital Info */}
-      <section className="flex w-[280px] shrink-0 min-h-0 flex-col rounded-xl border border-navy-700 bg-navy-800 p-5">
+    <div
+      className="flex gap-4 p-4 overflow-hidden"
+      style={{ height: "calc(100vh - 6.5rem)", maxHeight: "calc(100vh - 6.5rem)" }}
+    >
+      {/* LEFT: Hospital Command — wide */}
+      <section className="flex w-[360px] shrink-0 min-h-0 flex-col rounded-xl border border-navy-700 bg-navy-800 p-5 overflow-y-auto">
         <p className="font-display text-xs tracking-widest text-red-500">HOSPITAL COMMAND</p>
         <h2 className="mt-1 font-display text-2xl font-bold text-slate-100">{primaryHospital.name}</h2>
         <p className="text-sm text-slate-500">Trauma Center - Level 1</p>
@@ -50,26 +184,33 @@ function HospitalView({ ambulances, hospitals, incidents, theme }) {
         </div>
 
         <div className="mt-5">
-          <p className="mb-2 font-display text-xs tracking-widest text-slate-500">INCOMING UNITS</p>
-          <div className="space-y-2">
-            {displayedIncoming.map((unit) => (
-              <div
-                key={`${unit.unit}-${unit.bay}`}
-                className={`rounded-lg border-l-4 bg-navy-700 p-3 ${
-                  unit.priority === "P1" ? "border-red-500" : "border-amber-500"
-                }`}
-              >
-                <p className="font-display text-sm font-semibold text-slate-100">{unit.unit}</p>
-                <p className="text-xs text-slate-400">{unit.condition}</p>
-                <p className="text-xs text-slate-500">ETA {unit.eta} | {unit.bay}</p>
-              </div>
+          <p className="mb-2 font-display text-xs tracking-widest text-slate-500">
+            INCOMING UNITS
+            <span className="ml-2 rounded-full bg-red-500/20 px-2 py-0.5 text-red-400">
+              {incomingPatients.length}
+            </span>
+          </p>
+          <div>
+            {incomingPatients.map(({ patient, unit, bay, ambulanceData, contact }) => (
+              <IncomingUnitCard
+                key={patient.id}
+                patient={patient}
+                unit={unit}
+                bay={bay}
+                activeDispatch={activeDispatch}
+                patientPhone={contact}
+                ambulanceData={ambulanceData}
+              />
             ))}
           </div>
         </div>
       </section>
 
-      {/* MIDDLE: Full Citywide Map */}
-      <section className="flex-1 min-h-0 min-w-0">
+      {/* MIDDLE: Map — takes remaining space */}
+      <section
+        className="flex-1 min-w-0 min-h-0 overflow-hidden"
+        style={{ height: "100%", maxHeight: "100%" }}
+      >
         <EmergencyMap
           mode="hospital"
           ambulances={ambulances}
@@ -82,16 +223,14 @@ function HospitalView({ ambulances, hospitals, incidents, theme }) {
         />
       </section>
 
-      {/* RIGHT: Incident Log */}
-      <section className="flex w-[280px] shrink-0 min-h-0 flex-col rounded-xl border border-navy-700 bg-navy-800 p-5">
+      {/* RIGHT: Incident Log — shorter */}
+      <section className="flex w-[320px] shrink-0 min-h-0 flex-col rounded-xl border border-navy-700 bg-navy-800 p-5">
         <p className="mb-3 font-display text-xs tracking-widest text-slate-500">INCIDENT LOG</p>
-
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
           {TRIAGE_QUEUE.map((item) => (
             <TriageCard key={item.id} item={item} />
           ))}
         </div>
-
         <div className="mt-3 grid grid-cols-3 gap-3">
           <div className="rounded-lg bg-navy-700 p-3 text-center">
             <p className="font-display text-xl font-bold text-slate-100">6.2 min</p>
@@ -107,7 +246,6 @@ function HospitalView({ ambulances, hospitals, incidents, theme }) {
           </div>
         </div>
       </section>
-
     </div>
   );
 }

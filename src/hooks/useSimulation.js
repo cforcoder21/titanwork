@@ -61,12 +61,19 @@ export function useSimulation() {
     };
   }, []);
 
-  const triggerIncident = (emergencyType, patientLocation) => {
+  const triggerIncident = (emergencyType, patientLocation, patientContact) => {
     const incidentId = incidentCounterRef.current;
     incidentCounterRef.current += 1;
 
     const next = createIncidentRecord(emergencyType, ambulances, hospitals, incidentId, patientLocation);
-    setIncidents((prev) => [next.incident, ...prev]);
+
+    // Store each patient's own contact number in their incident
+    const incidentWithContact = {
+      ...next.incident,
+      patientContact: patientContact || null
+    };
+
+    setIncidents((prev) => [incidentWithContact, ...prev]);
 
     setHospitals((prev) =>
       prev.map((hospital) =>
@@ -93,7 +100,7 @@ export function useSimulation() {
     );
 
     return {
-      incidentId: next.incident.id,
+      incidentId: incidentWithContact.id,
       ambulanceId: next.assignedUnit.name,
       dispatchedAt: Date.now(),
       etaMinutes: Math.ceil(next.incident.initialEta / 60),
@@ -111,6 +118,7 @@ export function useSimulation() {
       pickupAddress: next.incident.pickupAddress,
       pickupLocation: { lat: next.incident.lat, lng: next.incident.lng },
       patientDetails: next.incident.patientDetails,
+      patientContact: patientContact || null,
       route: next.route,
       incidentCoord: { lat: next.incident.lat, lng: next.incident.lng },
       destinationCoord: { lat: next.assignedHospital.lat, lng: next.assignedHospital.lng }
