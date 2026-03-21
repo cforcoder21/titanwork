@@ -113,42 +113,42 @@ function App() {
   }, [demoMode]);
 
   return (
-    <div className="w-full min-h-screen bg-navy-900 text-slate-100 font-body transition-colors duration-300">
+    <div className="min-w-[1280px] bg-navy-900 text-slate-100 font-body transition-colors duration-300">
       {!isOnboardingComplete ? (
-        <div className="fixed inset-0 z-[5000] isolate flex items-center justify-center bg-navy-950/80 backdrop-blur-sm p-4">
-          <div className="relative z-[5001] w-full max-w-sm rounded-2xl border border-navy-600 bg-navy-900 p-4 sm:p-6 shadow-[0_24px_40px_rgba(0,0,0,0.45)]">
-            <p className="font-display text-[10px] sm:text-xs tracking-widest text-red-500">WELCOME</p>
-            <h2 className="mt-2 font-display text-xl sm:text-2xl font-bold text-slate-100">Confirm Phone and GPS</h2>
-            <p className="mt-1 text-xs sm:text-sm text-slate-400">Enter your phone number and capture GPS location to continue.</p>
-            <label className="mt-4 sm:mt-5 block">
-              <span className="font-display text-[10px] sm:text-xs tracking-widest text-slate-400">PHONE NUMBER</span>
+        <div className="fixed inset-0 z-[5000] isolate flex items-center justify-center bg-navy-950/80 backdrop-blur-sm">
+          <div className="relative z-[5001] w-[92%] max-w-md rounded-2xl border border-navy-600 bg-navy-900 p-6 shadow-[0_24px_40px_rgba(0,0,0,0.45)]">
+            <p className="font-display text-xs tracking-widest text-red-500">WELCOME</p>
+            <h2 className="mt-2 font-display text-2xl font-bold text-slate-100">Confirm Phone and GPS</h2>
+            <p className="mt-1 text-sm text-slate-400">Enter your phone number and capture GPS location to continue.</p>
+            <label className="mt-5 block">
+              <span className="font-display text-xs tracking-widest text-slate-400">PHONE NUMBER</span>
               <input
                 type="tel"
                 value={phoneNumber}
                 onChange={(event) => setPhoneNumber(event.target.value.replace(/\D/g, ""))}
                 placeholder="Enter contact number"
-                className="mt-2 w-full rounded-lg sm:rounded-xl border border-navy-600 bg-navy-800 px-3 py-2.5 sm:py-3 text-sm text-slate-100 outline-none transition-colors focus:border-red-500"
+                className="mt-2 w-full rounded-xl border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-slate-100 outline-none transition-colors focus:border-red-500"
               />
               {isPhoneTooShort ? (
-                <p className="mt-2 text-[11px] sm:text-xs text-red-400">Phone number must be exactly 10 digits.</p>
+                <p className="mt-2 text-xs text-red-400">Phone number must be exactly 10 digits.</p>
               ) : null}
               {isPhoneTooLong ? (
-                <p className="mt-2 text-[11px] sm:text-xs text-red-400">Only 10-digit phone numbers are valid.</p>
+                <p className="mt-2 text-xs text-red-400">Only 10-digit phone numbers are valid.</p>
               ) : null}
             </label>
             <button
               type="button"
               onClick={handleCaptureLocation}
-              className="mt-3 sm:mt-4 h-11 sm:h-10 w-full rounded-lg sm:rounded-xl border border-blue-500 bg-blue-500/10 font-display text-xs sm:text-sm font-semibold tracking-wider text-blue-400 transition-colors hover:bg-blue-500/20"
+              className="mt-4 h-10 w-full rounded-xl border border-blue-500 bg-blue-500/10 font-display text-sm font-semibold tracking-wider text-blue-400 transition-colors hover:bg-blue-500/20"
             >
               CAPTURE GPS LOCATION
             </button>
-            <p className="mt-2 text-[10px] sm:text-xs text-slate-500">{locationPrompt}</p>
+            <p className="mt-2 text-xs text-slate-500">{locationPrompt}</p>
             <button
               type="button"
               onClick={handleEnterPlatform}
               disabled={!canEnterPlatform}
-              className="mt-4 sm:mt-5 h-11 sm:h-11 w-full rounded-lg sm:rounded-xl bg-red-500 font-display text-sm font-bold tracking-wider text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-navy-700 disabled:text-slate-500"
+              className="mt-5 h-11 w-full rounded-xl bg-red-500 font-display text-sm font-bold tracking-wider text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-navy-700 disabled:text-slate-500"
             >
               ENTER PLATFORM
             </button>
