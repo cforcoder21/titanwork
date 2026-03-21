@@ -331,8 +331,25 @@ function DriverView({ ambulances, activeDispatch, theme, userPhoneNumber, shared
           <EmergencyMap
             mode="driver"
             ambulances={ambulances}
-            hospitals={[{ id: "dest", name: "SMS Hospital Jaipur", lat: 26.9056, lng: 75.8137, beds: 18, icuBeds: 4 }]}
-            incidents={[{ id: "pickup", lat: route[1][0], lng: route[1][1], type: { label: "Pickup" }, priority: "P1" }]}
+            hospitals={[
+              {
+                id: "dest",
+                name: activeDispatch?.hospitalName || "Hospital",
+                lat: route[route.length - 1][0],
+                lng: route[route.length - 1][1],
+                beds: 0,
+                icuBeds: 0
+              }
+            ]}
+            incidents={[
+              {
+                id: "pickup",
+                lat: route[1] ? route[1][0] : route[0][0],
+                lng: route[1] ? route[1][1] : route[0][1],
+                type: { label: activeDispatch ? "Pickup" : "Standby" },
+                priority: activeDispatch?.priority || "P1"
+              }
+            ]}
             center={DELHI_CENTER}
             zoom={12}
             driverRoute={effectiveRoute}
