@@ -1,0 +1,6 @@
+# Auto detect text files and normalize line endings to LF
+* text=auto
+
+# Ensure .bin scripts are always executable on Unix systems
+*.bin eol=lf diff=binary
+.bin/** eol=lf
