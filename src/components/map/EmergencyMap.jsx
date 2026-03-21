@@ -43,7 +43,7 @@ function EmergencyMap({
       </div>
 
       <div className="h-[calc(100%-53px)] w-full">
-        <MapContainer center={center} zoom={zoom} className="h-full w-full" scrollWheelZoom>
+        <MapContainer center={center} zoom={zoom} className="h-full w-full" scrollWheelZoom={false}>
           <TileLayer url={tileUrl} />
 
           {mode === "driver" && driverUnit && driverPosition ? (

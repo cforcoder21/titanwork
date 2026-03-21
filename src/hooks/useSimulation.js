@@ -95,11 +95,19 @@ export function useSimulation() {
     return {
       incidentId: next.incident.id,
       ambulanceId: next.assignedUnit.name,
+      dispatchedAt: Date.now(),
       etaMinutes: Math.ceil(next.incident.initialEta / 60),
       initialEtaSeconds: next.incident.initialEta,
       hospitalName: next.assignedHospital.name,
       hospitalDistanceBand: next.incident.hospitalDistanceBand,
       distanceKm: next.incident.distanceKm,
+      driverName: next.assignedUnit.driver,
+      conductorName: next.assignedUnit.conductor,
+      medicalSupportName: next.assignedUnit.medicalSupport,
+      supportContacts: {
+        conductor: next.assignedUnit.conductorContact,
+        medicalSupport: next.assignedUnit.medicalSupportContact
+      },
       pickupAddress: next.incident.pickupAddress,
       pickupLocation: { lat: next.incident.lat, lng: next.incident.lng },
       patientDetails: next.incident.patientDetails,

@@ -16,6 +16,13 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function formatTimeHms(date = new Date()) {
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
 function pathLength(path) {
   if (!path || path.length < 2) return 0;
   let total = 0;
@@ -33,6 +40,50 @@ function pickupRatioFromRoute(route) {
   const legTwo = Math.hypot(route[2][0] - route[1][0], route[2][1] - route[1][1]);
   const total = legOne + legTwo;
   return total === 0 ? 0.5 : legOne / total;
+}
+
+function startAmbulanceSiren(context, durationMs = 5000) {
+  if (!context) return () => {};
+
+  const durationSeconds = durationMs / 1000;
+  const now = context.currentTime;
+  const carrier = context.createOscillator();
+  const lfo = context.createOscillator();
+  const lfoGain = context.createGain();
+  const outputGain = context.createGain();
+
+  carrier.type = "sawtooth";
+  carrier.frequency.setValueAtTime(760, now);
+  lfo.type = "sine";
+  lfo.frequency.setValueAtTime(0.95, now);
+  lfoGain.gain.setValueAtTime(300, now);
+
+  outputGain.gain.setValueAtTime(0.0001, now);
+  outputGain.gain.exponentialRampToValueAtTime(0.09, now + 0.08);
+  outputGain.gain.exponentialRampToValueAtTime(0.0001, now + durationSeconds);
+
+  lfo.connect(lfoGain);
+  lfoGain.connect(carrier.frequency);
+  carrier.connect(outputGain);
+  outputGain.connect(context.destination);
+
+  carrier.start(now);
+  lfo.start(now);
+  carrier.stop(now + durationSeconds + 0.05);
+  lfo.stop(now + durationSeconds + 0.05);
+
+  return () => {
+    try {
+      carrier.stop();
+      lfo.stop();
+    } catch {
+      // Nodes may already be stopped.
+    }
+    carrier.disconnect();
+    lfo.disconnect();
+    lfoGain.disconnect();
+    outputGain.disconnect();
+  };
 }
 
 async function fetchRoadRoute(start, end) {
@@ -153,10 +204,36 @@ function PatientView({
     resp: "--"
   });
   const [routeProgress, setRouteProgress] = useState(0);
+  const [isPatientOnboard, setIsPatientOnboard] = useState(false);
   const [showPickupPopup, setShowPickupPopup] = useState(false);
+  const [pickupPopupDurationMs, setPickupPopupDurationMs] = useState(12000);
+  const [showArrivalPopup, setShowArrivalPopup] = useState(false);
+  const [pickupNotifiedAt, setPickupNotifiedAt] = useState("");
+  const [arrivalNotifiedAt, setArrivalNotifiedAt] = useState("");
   const pickupPopupIncidentRef = useRef(null);
+  const arrivalPopupIncidentRef = useRef(null);
+  const pickupPopupHideTimerRef = useRef(null);
+  const arrivalPopupHideTimerRef = useRef(null);
+  const pickupSoundStopRef = useRef(null);
+  const audioContextRef = useRef(null);
   const [resolvedRoute, setResolvedRoute] = useState([]);
   const [pickupThreshold, setPickupThreshold] = useState(0.5);
+
+  const ensureAudioContext = () => {
+    if (audioContextRef.current) return audioContextRef.current;
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) return null;
+    audioContextRef.current = new AudioContextCtor();
+    return audioContextRef.current;
+  };
+
+  const unlockAudioContext = () => {
+    const context = ensureAudioContext();
+    if (!context) return;
+    if (context.state === "suspended") {
+      context.resume().catch(() => {});
+    }
+  };
 
   useEffect(() => {
     if (userLocation) {
@@ -166,7 +243,32 @@ function PatientView({
   }, [userLocation]);
 
   useEffect(() => {
-    const monitoringActive = routeProgress >= pickupThreshold && !!activeDispatch;
+    const onFirstInteraction = () => unlockAudioContext();
+    window.addEventListener("pointerdown", onFirstInteraction, { once: true });
+    return () => window.removeEventListener("pointerdown", onFirstInteraction);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (pickupPopupHideTimerRef.current) {
+        clearTimeout(pickupPopupHideTimerRef.current);
+      }
+      if (arrivalPopupHideTimerRef.current) {
+        clearTimeout(arrivalPopupHideTimerRef.current);
+      }
+      if (pickupSoundStopRef.current) {
+        pickupSoundStopRef.current();
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    const monitoringActive = isPatientOnboard && !!activeDispatch;
     if (!monitoringActive) {
       setVitals({
         heartRate: "--",
@@ -177,7 +279,7 @@ function PatientView({
       return undefined;
     }
 
-    const vitalsInterval = setInterval(() => {
+    const updateVitals = () => {
       const systolic = randomInt(108, 126);
       const diastolic = randomInt(68, 84);
       setVitals({
@@ -186,10 +288,17 @@ function PatientView({
         spo2: randomInt(96, 99),
         resp: randomInt(14, 18)
       });
+    };
+
+    // Show live vitals instantly at pickup instead of waiting for first interval tick.
+    updateVitals();
+
+    const vitalsInterval = setInterval(() => {
+      updateVitals();
     }, 3000);
 
     return () => clearInterval(vitalsInterval);
-  }, [activeDispatch, routeProgress, pickupThreshold]);
+  }, [activeDispatch, isPatientOnboard]);
 
   const activeIncident = useMemo(
     () =>
@@ -202,6 +311,7 @@ function PatientView({
   const remainingSeconds = activeIncident ? activeIncident.eta : 0;
 
   const acquireLocation = () => {
+    unlockAudioContext();
     if (!navigator.geolocation) {
       setLocationStatus("Geolocation not supported in this browser");
       return;
@@ -227,7 +337,11 @@ function PatientView({
   useEffect(() => {
     if (!activeDispatch?.route?.length) {
       setRouteProgress(0);
+      setIsPatientOnboard(false);
       setShowPickupPopup(false);
+      setShowArrivalPopup(false);
+      setPickupNotifiedAt("");
+      setArrivalNotifiedAt("");
       setResolvedRoute([]);
       return undefined;
     }
@@ -282,13 +396,70 @@ function PatientView({
 
     if (routeProgress >= pickupThreshold && pickupPopupIncidentRef.current !== activeDispatch.incidentId) {
       pickupPopupIncidentRef.current = activeDispatch.incidentId;
+      setIsPatientOnboard(true);
+      setPickupNotifiedAt(formatTimeHms());
+      const popupDurationMs = randomInt(10, 15) * 1000;
+      setPickupPopupDurationMs(popupDurationMs);
       setShowPickupPopup(true);
-      const hideTimer = setTimeout(() => setShowPickupPopup(false), 4500);
-      return () => clearTimeout(hideTimer);
+
+      if (pickupPopupHideTimerRef.current) {
+        clearTimeout(pickupPopupHideTimerRef.current);
+      }
+      if (pickupSoundStopRef.current) {
+        pickupSoundStopRef.current();
+      }
+
+      unlockAudioContext();
+      pickupSoundStopRef.current = startAmbulanceSiren(ensureAudioContext(), 5000);
+      pickupPopupHideTimerRef.current = setTimeout(() => {
+        setShowPickupPopup(false);
+        pickupPopupHideTimerRef.current = null;
+      }, popupDurationMs);
     }
 
     return undefined;
   }, [routeProgress, activeDispatch?.incidentId, pickupThreshold]);
+
+  useEffect(() => {
+    if (!activeDispatch?.incidentId) return undefined;
+
+    if (routeProgress >= 1 && arrivalPopupIncidentRef.current !== activeDispatch.incidentId) {
+      arrivalPopupIncidentRef.current = activeDispatch.incidentId;
+      setArrivalNotifiedAt(formatTimeHms());
+      setShowArrivalPopup(true);
+
+      if (arrivalPopupHideTimerRef.current) {
+        clearTimeout(arrivalPopupHideTimerRef.current);
+      }
+
+      arrivalPopupHideTimerRef.current = setTimeout(() => {
+        setShowArrivalPopup(false);
+        arrivalPopupHideTimerRef.current = null;
+      }, 10000);
+    }
+
+    return undefined;
+  }, [routeProgress, activeDispatch?.incidentId]);
+
+  useEffect(() => {
+    if (activeDispatch?.incidentId) return;
+    setIsPatientOnboard(false);
+    setShowArrivalPopup(false);
+    setPickupNotifiedAt("");
+    setArrivalNotifiedAt("");
+    if (pickupPopupHideTimerRef.current) {
+      clearTimeout(pickupPopupHideTimerRef.current);
+      pickupPopupHideTimerRef.current = null;
+    }
+    if (arrivalPopupHideTimerRef.current) {
+      clearTimeout(arrivalPopupHideTimerRef.current);
+      arrivalPopupHideTimerRef.current = null;
+    }
+    if (pickupSoundStopRef.current) {
+      pickupSoundStopRef.current();
+      pickupSoundStopRef.current = null;
+    }
+  }, [activeDispatch?.incidentId]);
 
   const trackedUnit = useMemo(() => {
     if (!resolvedRoute?.length || !activeDispatch?.ambulanceId) return null;
@@ -309,8 +480,8 @@ function PatientView({
   );
 
   return (
-    <div className="grid h-[calc(100vh-6.5rem)] grid-cols-5 gap-4 p-4">
-      <section className="col-span-2 flex min-h-0 flex-col gap-4 rounded-xl border border-navy-700 bg-navy-800 p-5">
+    <div className="grid min-h-[calc(100vh-6.5rem)] grid-cols-5 gap-4 p-4">
+      <section className="col-span-2 flex min-h-0 max-h-[calc(100vh-7.5rem)] flex-col gap-4 overflow-y-auto rounded-xl border border-navy-700 bg-navy-800 p-5">
         <div>
           <p className="font-display text-xs font-semibold tracking-widest text-red-500">PATIENT SOS</p>
           <h2 className="mt-1 font-display text-2xl font-bold text-slate-100">Emergency Assist</h2>
@@ -356,7 +527,10 @@ function PatientView({
 
         <button
           type="button"
-          onClick={() => onTriggerSos(selectedType, patientLocation)}
+          onClick={() => {
+            unlockAudioContext();
+            onTriggerSos(selectedType, patientLocation);
+          }}
           className="h-14 rounded-xl bg-red-500 font-display text-lg font-bold tracking-wider text-white transition-all hover:bg-red-600 animate-sos-pulse"
         >
           TRIGGER SOS DISPATCH
@@ -372,12 +546,12 @@ function PatientView({
 
         <p className="text-xs text-slate-500">{locationStatus}</p>
         <p className="text-xs text-slate-500">
-          Monitoring: {routeProgress >= pickupThreshold && activeDispatch ? "ACTIVE - patient onboard" : "WAITING - starts after pickup"}
+          Monitoring: {isPatientOnboard && activeDispatch ? "ACTIVE - patient onboard" : "WAITING - starts after pickup"}
         </p>
 
         <DispatchResult dispatch={activeDispatch} remainingSeconds={remainingSeconds} />
 
-        <div className="mt-auto grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 pb-1">
           <VitalCard
             label="HEART RATE"
             value={vitals.heartRate}
@@ -417,9 +591,32 @@ function PatientView({
               <p className="font-display text-sm font-semibold leading-relaxed text-slate-100">
                 {activeDispatch.ambulanceId} reached the patient and is now heading to {activeDispatch.hospitalName}.
               </p>
+              <p className="mt-2 text-xs tracking-wider text-slate-400">TIME: {pickupNotifiedAt || formatTimeHms()}</p>
               <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-navy-700">
-                <div className="h-full w-full origin-left animate-[sos-pulse_1.6s_ease-in-out_infinite] bg-green-500/80" />
+                <div
+                  className="h-full w-full origin-left bg-green-500/80"
+                  style={{ animation: `pickup-countdown ${pickupPopupDurationMs}ms linear forwards` }}
+                />
               </div>
+            </div>
+          ) : null}
+
+          {showArrivalPopup && activeDispatch ? (
+            <div
+              className={`pointer-events-none absolute right-4 z-30 w-[360px] animate-slide-up rounded-2xl border border-blue-400/70 bg-navy-950/95 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md ${
+                showPickupPopup ? "top-44" : "top-4"
+              }`}
+            >
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/20 text-blue-300">
+                  <CheckCircle2 size={16} />
+                </span>
+                <p className="font-display text-[11px] font-semibold tracking-[0.2em] text-blue-300">HOSPITAL ARRIVAL CONFIRMED</p>
+              </div>
+              <p className="font-display text-sm font-semibold leading-relaxed text-slate-100">
+                Patient has reached {activeDispatch.hospitalName} and is now under treatment.
+              </p>
+              <p className="mt-2 text-xs tracking-wider text-slate-400">TIME: {arrivalNotifiedAt || formatTimeHms()}</p>
             </div>
           ) : null}
         </div>
