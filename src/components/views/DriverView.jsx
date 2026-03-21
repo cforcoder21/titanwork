@@ -1,12 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import EmergencyMap from "../map/EmergencyMap";
+import { DELHI_CENTER } from "../../data/constants";
 
 const routeInstructions = [
   { dir: "left", road: "MI Road", distance: "400 m" },
   { dir: "right", road: "Tonk Road", distance: "1.1 km" },
   { dir: "left", road: "SMS Hospital Link Road", distance: "600 m" }
 ];
+
+async function fetchRoadRoute(start, end) {
+  const query = `${start[1]},${start[0]};${end[1]},${end[0]}`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${query}?overview=full&geometries=geojson`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Routing service unavailable");
+  const data = await response.json();
+  const coordinates = data?.routes?.[0]?.geometry?.coordinates;
+  if (!coordinates?.length) throw new Error("No route geometry returned");
+  return coordinates.map(([lng, lat]) => [lat, lng]);
+}
 
 function interpolateRoute(route, progress) {
   if (!route.length) return [26.9124, 75.7873];
@@ -27,29 +39,23 @@ function formatTimer(seconds) {
   return `${mins}:${secs}`;
 }
 
-function DriverView({ ambulances, activeDispatch, theme, userPhoneNumber }) {
+function pickupRatioFromRoute(route) {
+  if (!route || route.length < 3) return 0.5;
+  const legOne = Math.hypot(route[1][0] - route[0][0], route[1][1] - route[0][1]);
+  const legTwo = Math.hypot(route[2][0] - route[1][0], route[2][1] - route[1][1]);
+  const total = legOne + legTwo;
+  return total === 0 ? 0.5 : legOne / total;
+}
+
+function DriverView({ ambulances, activeDispatch, theme, userPhoneNumber, sharedProgress }) {
   const [speed, setSpeed] = useState(52);
   const [eta, setEta] = useState(420);
   const [distance, setDistance] = useState(3.2);
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    const speedTimer = setInterval(() => {
-      setSpeed((prev) => Math.max(38, Math.min(72, prev + Math.floor(Math.random() * 11) - 5)));
-    }, 2000);
-    const etaTimer = setInterval(() => {
-      setEta((prev) => Math.max(0, prev - 1));
-      setDistance((prev) => Math.max(0, Number((prev - 0.01).toFixed(2))));
-    }, 1000);
-    const moveTimer = setInterval(() => {
-      setProgress((prev) => (prev + 0.006 > 1 ? 0 : prev + 0.006));
-    }, 500);
-    return () => {
-      clearInterval(speedTimer);
-      clearInterval(etaTimer);
-      clearInterval(moveTimer);
-    };
-  }, []);
+  const [pickupNotificationDone, setPickupNotificationDone] = useState(false);
+  const [arrivalNotificationDone, setArrivalNotificationDone] = useState(false);
+  const [resolvedRoute, setResolvedRoute] = useState([]);
+  
+  const routeProgress = Math.max(0, Math.min(1, sharedProgress || 0));
 
   const driverUnit = ambulances.find((unit) => unit.name === "AMB-03") || ambulances[0];
 
@@ -63,10 +69,63 @@ function DriverView({ ambulances, activeDispatch, theme, userPhoneNumber }) {
     ];
   }, [activeDispatch]);
 
+  useEffect(() => {
+    if (!route?.length || route.length < 3) {
+      setResolvedRoute(route || []);
+      return undefined;
+    }
+
+    setResolvedRoute(route);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const firstLeg = await fetchRoadRoute(route[0], route[1]);
+        const secondLeg = await fetchRoadRoute(route[1], route[2]);
+        const mergedRoute = [...firstLeg, ...secondLeg.slice(1)];
+        if (!cancelled && mergedRoute.length > 2) {
+          setResolvedRoute(mergedRoute);
+        }
+      } catch {
+        if (!cancelled) setResolvedRoute(route);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [route]);
+
+  useEffect(() => {
+    const speedTimer = setInterval(() => {
+      setSpeed((prev) => Math.max(38, Math.min(72, prev + Math.floor(Math.random() * 11) - 5)));
+    }, 2000);
+    const etaTimer = setInterval(() => {
+      setEta((prev) => Math.max(0, prev - 1));
+      setDistance((prev) => Math.max(0, Number((prev - 0.01).toFixed(2))));
+    }, 1000);
+    return () => {
+      clearInterval(speedTimer);
+      clearInterval(etaTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeDispatch?.incidentId) return undefined;
+    const threshold = pickupRatioFromRoute(route);
+    if (routeProgress >= threshold && !pickupNotificationDone) {
+      setPickupNotificationDone(true);
+    }
+    if (routeProgress >= 1 && !arrivalNotificationDone) {
+      setArrivalNotificationDone(true);
+    }
+  }, [routeProgress, activeDispatch?.incidentId, route, pickupNotificationDone, arrivalNotificationDone]);
+
   const missionPatient = activeDispatch?.patientDetails || "Cardiac Arrest - Male 54";
   const missionPickup = activeDispatch?.pickupAddress || "MI Road, Jaipur";
   const missionDestination = activeDispatch?.hospitalName || "SMS Hospital Jaipur";
-  const driverPosition = interpolateRoute(route, progress);
+  const effectiveRoute = resolvedRoute.length > 1 ? resolvedRoute : route;
+  const driverPosition = interpolateRoute(effectiveRoute, routeProgress);
 
   return (
     <div style={{
@@ -162,9 +221,9 @@ function DriverView({ ambulances, activeDispatch, theme, userPhoneNumber }) {
             ambulances={ambulances}
             hospitals={[{ id: "dest", name: "SMS Hospital Jaipur", lat: 26.9056, lng: 75.8137, beds: 18, icuBeds: 4 }]}
             incidents={[{ id: "pickup", lat: route[1][0], lng: route[1][1], type: { label: "Pickup" }, priority: "P1" }]}
-            center={driverPosition}
-            zoom={13}
-            driverRoute={route}
+            center={DELHI_CENTER}
+            zoom={12}
+            driverRoute={effectiveRoute}
             driverUnit={driverUnit}
             driverPosition={driverPosition}
             theme={theme}

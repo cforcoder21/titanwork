@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Brain, CheckCircle2, Flame, Heart } from "lucide-react";
-import { EMERGENCY_TYPES } from "../../data/constants";
+import { DELHI_CENTER, EMERGENCY_TYPES } from "../../data/constants";
 import DispatchResult from "../ui/DispatchResult";
 import EmergencyMap from "../map/EmergencyMap";
 import VitalCard from "../ui/VitalCard";
@@ -192,7 +192,8 @@ function PatientView({
   activeDispatch,
   theme,
   userPhoneNumber,
-  userLocation
+  userLocation,
+  sharedProgress
 }) {
   const [selectedType, setSelectedType] = useState(EMERGENCY_TYPES[0]);
   const [patientLocation, setPatientLocation] = useState(null);
@@ -203,7 +204,6 @@ function PatientView({
     spo2: "--",
     resp: "--"
   });
-  const [routeProgress, setRouteProgress] = useState(0);
   const [isPatientOnboard, setIsPatientOnboard] = useState(false);
   const [showPickupPopup, setShowPickupPopup] = useState(false);
   const [pickupPopupDurationMs, setPickupPopupDurationMs] = useState(12000);
@@ -218,6 +218,8 @@ function PatientView({
   const audioContextRef = useRef(null);
   const [resolvedRoute, setResolvedRoute] = useState([]);
   const [pickupThreshold, setPickupThreshold] = useState(0.5);
+
+  const routeProgress = Math.max(0, Math.min(1, sharedProgress || 0));
 
   const ensureAudioContext = () => {
     if (audioContextRef.current) return audioContextRef.current;
@@ -336,7 +338,6 @@ function PatientView({
 
   useEffect(() => {
     if (!activeDispatch?.route?.length) {
-      setRouteProgress(0);
       setIsPatientOnboard(false);
       setShowPickupPopup(false);
       setShowArrivalPopup(false);
@@ -371,25 +372,10 @@ function PatientView({
       }
     })();
 
-    const totalSeconds = Math.max(1, activeDispatch.initialEtaSeconds || activeDispatch.etaMinutes * 60);
-    const totalTicks = Math.max(1, totalSeconds * 2);
-    let tick = 0;
-    setRouteProgress(0);
-
-    const movementTimer = setInterval(() => {
-      tick += 1;
-      const progress = Math.min(1, tick / totalTicks);
-      setRouteProgress(progress);
-      if (progress >= 1) {
-        clearInterval(movementTimer);
-      }
-    }, 500);
-
     return () => {
       isCancelled = true;
-      clearInterval(movementTimer);
     };
-  }, [activeDispatch?.incidentId, activeDispatch?.initialEtaSeconds, activeDispatch?.etaMinutes, activeDispatch?.route]);
+  }, [activeDispatch?.incidentId, activeDispatch?.route]);
 
   useEffect(() => {
     if (!activeDispatch?.incidentId) return undefined;
@@ -571,7 +557,7 @@ function PatientView({
             ambulances={ambulances}
             hospitals={hospitals}
             incidents={activeIncident ? [activeIncident] : []}
-            center={patientLocation ? [patientLocation.lat, patientLocation.lng] : [26.9124, 75.7873]}
+            center={DELHI_CENTER}
             zoom={12}
             dispatchRoute={routeSegments.remaining}
             consumedDispatchRoute={routeSegments.consumed}

@@ -1,9 +1,49 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CapacityBar from "../ui/CapacityBar";
 import EmergencyMap from "../map/EmergencyMap";
 import TriageCard from "../ui/TriageCard";
-import { TRIAGE_QUEUE } from "../../data/constants";
+import { DELHI_CENTER, TRIAGE_QUEUE } from "../../data/constants";
 import { ambulances as ambulanceSeed } from "../../data/simulate";
+
+async function fetchRoadRoute(start, end) {
+  const query = `${start[1]},${start[0]};${end[1]},${end[0]}`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${query}?overview=full&geometries=geojson`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Routing service unavailable");
+  const data = await response.json();
+  const coordinates = data?.routes?.[0]?.geometry?.coordinates;
+  if (!coordinates?.length) throw new Error("No route geometry returned");
+  return coordinates.map(([lng, lat]) => [lat, lng]);
+}
+
+function interpolateRoute(route, progress) {
+  if (!route?.length) return null;
+  if (route.length === 1) return route[0];
+  const clamped = Math.max(0, Math.min(1, progress));
+  const segments = [];
+  let totalLength = 0;
+  for (let index = 0; index < route.length - 1; index += 1) {
+    const [latA, lngA] = route[index];
+    const [latB, lngB] = route[index + 1];
+    const length = Math.hypot(latB - latA, lngB - lngA);
+    segments.push({ start: route[index], end: route[index + 1], length });
+    totalLength += length;
+  }
+  if (totalLength === 0) return route[0];
+  const targetDistance = clamped * totalLength;
+  let covered = 0;
+  for (const segment of segments) {
+    const nextCovered = covered + segment.length;
+    if (targetDistance <= nextCovered) {
+      const localProgress = segment.length === 0 ? 0 : (targetDistance - covered) / segment.length;
+      const [latA, lngA] = segment.start;
+      const [latB, lngB] = segment.end;
+      return [latA + (latB - latA) * localProgress, lngA + (lngB - lngA) * localProgress];
+    }
+    covered = nextCovered;
+  }
+  return route[route.length - 1];
+}
 
 function formatEta(seconds) {
   const mins = String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, "0");
@@ -147,8 +187,62 @@ function IncomingUnitCard({ patient, unit, bay, activeDispatch, patientPhone, am
   );
 }
 
-function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch }) {
+function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch, sharedProgress }) {
   const primaryHospital = hospitals[0];
+  const [resolvedActiveRoute, setResolvedActiveRoute] = useState([]);
+
+  useEffect(() => {
+    const activeRoute = activeDispatch?.route;
+    if (!activeRoute?.length || activeRoute.length < 3) {
+      setResolvedActiveRoute(activeRoute || []);
+      return undefined;
+    }
+
+    setResolvedActiveRoute(activeRoute);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const firstLeg = await fetchRoadRoute(activeRoute[0], activeRoute[1]);
+        const secondLeg = await fetchRoadRoute(activeRoute[1], activeRoute[2]);
+        const mergedRoute = [...firstLeg, ...secondLeg.slice(1)];
+        if (!cancelled && mergedRoute.length > 2) {
+          setResolvedActiveRoute(mergedRoute);
+        }
+      } catch {
+        if (!cancelled) setResolvedActiveRoute(activeRoute);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDispatch?.route]);
+
+  // Calculate active dispatch ambulance position based on shared progress
+  const activeRoute = resolvedActiveRoute.length > 1 ? resolvedActiveRoute : activeDispatch?.route;
+
+  const trackedAmbulance = activeDispatch
+    ? (() => {
+        const unit = ambulances.find((u) => u.name === activeDispatch.ambulanceId);
+        const route = activeRoute || [
+          [unit?.lat || 26.9284, unit?.lng || 75.8031],
+          [activeDispatch.lat || 26.9124, activeDispatch.lng || 75.7873],
+          [primaryHospital?.lat || 26.9056, primaryHospital?.lng || 75.8137]
+        ];
+        const position = interpolateRoute(route, sharedProgress || 0);
+        return position
+          ? {
+              id: activeDispatch.ambulanceId,
+              name: activeDispatch.ambulanceId,
+              status: "dispatched",
+              position,
+              lat: position[0],
+              lng: position[1]
+            }
+          : null;
+      })()
+    : null;
 
   const incomingPatients = TRIAGE_QUEUE.map((patient, idx) => {
     const incident = incidents[idx];
@@ -159,11 +253,13 @@ function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch 
     return { patient, unit: unitName, bay, ambulanceData, contact };
   });
 
-  const routeSet = incidents.slice(0, 3).flatMap((incident) => {
-    const unit = ambulances.find((item) => item.name === incident.assignedUnit);
-    if (!unit || !primaryHospital) return [];
-    return [[[unit.lat, unit.lng], [incident.lat, incident.lng], [primaryHospital.lat, primaryHospital.lng]]];
-  });
+  const routeSet = activeRoute
+    ? [activeRoute]
+    : incidents.slice(0, 3).flatMap((incident) => {
+        const unit = ambulances.find((item) => item.name === incident.assignedUnit);
+        if (!unit || !primaryHospital) return [];
+        return [[[unit.lat, unit.lng], [incident.lat, incident.lng], [primaryHospital.lat, primaryHospital.lng]]];
+      });
 
   return (
     <div
@@ -216,9 +312,10 @@ function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch 
           ambulances={ambulances}
           hospitals={hospitals}
           incidents={incidents}
-          center={[primaryHospital.lat, primaryHospital.lng]}
-          zoom={13}
+          center={DELHI_CENTER}
+          zoom={12}
           routeSet={routeSet}
+          trackedUnit={trackedAmbulance}
           theme={theme}
         />
       </section>

@@ -1,4 +1,4 @@
-import { DELHI_CENTER, DELHI_ADDRESSES } from "./constants";
+import { DELHI_CENTER, DELHI_ADDRESSES } from "./constants.js";
 
 const STATUS_CYCLE = ["available", "dispatched", "en-route"];
 

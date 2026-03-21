@@ -19,9 +19,30 @@ function App() {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
   const [demoTick, setDemoTick] = useState(0);
+  const [progressTick, setProgressTick] = useState(0);
   const { ambulances, hospitals, incidents, triggerIncident } = useSimulation();
 
   const currentViewIndex = useMemo(() => VIEW_ORDER.indexOf(activeView), [activeView]);
+
+  // Shared progress computation for all views
+  const sharedDispatchProgress = useMemo(() => {
+    if (!activeDispatch?.incidentId) return 0;
+    const totalSeconds = Math.max(1, activeDispatch.initialEtaSeconds || activeDispatch.etaMinutes * 60 || 1);
+    const activeIncident = incidents.find((inc) => inc.id === activeDispatch.incidentId);
+    if (activeIncident) {
+      const remaining = Math.max(0, activeIncident.eta);
+      return Math.max(0, Math.min(1, (totalSeconds - remaining) / totalSeconds));
+    }
+    const elapsed = Math.max(0, Math.floor((Date.now() - activeDispatch.dispatchedAt) / 1000));
+    return Math.max(0, Math.min(1, elapsed / totalSeconds));
+  }, [activeDispatch, incidents, progressTick]);
+
+  // Progress ticker
+  useEffect(() => {
+    if (!activeDispatch?.incidentId) return undefined;
+    const ticker = setInterval(() => setProgressTick((p) => p + 1), 500);
+    return () => clearInterval(ticker);
+  }, [activeDispatch?.incidentId]);
 
   const handleSos = (type, patientLocation) => {
     const dispatch = triggerIncident(type, patientLocation);
@@ -61,7 +82,16 @@ function App() {
     );
   };
 
-  const canEnterPlatform = phoneNumber.trim().length >= 8 && !!userLocation;
+  const phoneDigits = phoneNumber.replace(/\D/g, "");
+  const isPhoneTooShort = phoneDigits.length > 0 && phoneDigits.length < 10;
+  const isPhoneTooLong = phoneDigits.length > 10;
+  const isPhoneValid = phoneDigits.length === 10;
+  const canEnterPlatform = isPhoneValid && !!userLocation;
+
+  const handleEnterPlatform = () => {
+    if (!canEnterPlatform) return;
+    setIsOnboardingComplete(true);
+  };
 
   useEffect(() => {
     if (!demoMode) return undefined;
@@ -95,10 +125,16 @@ function App() {
               <input
                 type="tel"
                 value={phoneNumber}
-                onChange={(event) => setPhoneNumber(event.target.value.replace(/[^0-9+]/g, ""))}
+                onChange={(event) => setPhoneNumber(event.target.value.replace(/\D/g, ""))}
                 placeholder="Enter contact number"
                 className="mt-2 w-full rounded-xl border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-slate-100 outline-none transition-colors focus:border-red-500"
               />
+              {isPhoneTooShort ? (
+                <p className="mt-2 text-xs text-red-400">Phone number must be exactly 10 digits.</p>
+              ) : null}
+              {isPhoneTooLong ? (
+                <p className="mt-2 text-xs text-red-400">Only 10-digit phone numbers are valid.</p>
+              ) : null}
             </label>
             <button
               type="button"
@@ -110,7 +146,7 @@ function App() {
             <p className="mt-2 text-xs text-slate-500">{locationPrompt}</p>
             <button
               type="button"
-              onClick={() => setIsOnboardingComplete(true)}
+              onClick={handleEnterPlatform}
               disabled={!canEnterPlatform}
               className="mt-5 h-11 w-full rounded-xl bg-red-500 font-display text-sm font-bold tracking-wider text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-navy-700 disabled:text-slate-500"
             >
@@ -143,6 +179,7 @@ function App() {
             theme={theme}
             userPhoneNumber={phoneNumber}
             userLocation={userLocation}
+            sharedProgress={sharedDispatchProgress}
           />
         ) : null}
 
@@ -152,6 +189,7 @@ function App() {
             activeDispatch={activeDispatch}
             theme={theme}
             userPhoneNumber={phoneNumber}
+            sharedProgress={sharedDispatchProgress}
           />
         ) : null}
 
@@ -163,6 +201,7 @@ function App() {
             theme={theme}
             activeDispatch={activeDispatch}
             patientPhone={phoneNumber}
+            sharedProgress={sharedDispatchProgress}
           />
         ) : null}
       </main>
