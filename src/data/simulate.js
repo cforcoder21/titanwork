@@ -3,11 +3,76 @@ import { DELHI_CENTER, DELHI_ADDRESSES } from "./constants";
 const STATUS_CYCLE = ["available", "dispatched", "en-route"];
 
 export const ambulances = [
-  { id: 1, name: "AMB-01", lat: 26.9284, lng: 75.8031, status: "available", speed: 44, driver: "Arjun", heading: 72 },
-  { id: 2, name: "AMB-02", lat: 26.8962, lng: 75.7814, status: "en-route", speed: 51, driver: "Kabir", heading: 120 },
-  { id: 3, name: "AMB-03", lat: 26.9423, lng: 75.7719, status: "dispatched", speed: 48, driver: "Rehan", heading: 204 },
-  { id: 4, name: "AMB-04", lat: 26.8738, lng: 75.8198, status: "available", speed: 41, driver: "Vihaan", heading: 310 },
-  { id: 5, name: "AMB-05", lat: 26.9105, lng: 75.7472, status: "available", speed: 46, driver: "Ishaan", heading: 168 }
+  {
+    id: 1,
+    name: "AMB-01",
+    lat: 26.9284,
+    lng: 75.8031,
+    status: "available",
+    speed: 44,
+    driver: "Arjun",
+    conductor: "Aman",
+    medicalSupport: "Nurse Priya",
+    conductorContact: "+91 9516486334",
+    medicalSupportContact: "+91 9516486335",
+    heading: 72
+  },
+  {
+    id: 2,
+    name: "AMB-02",
+    lat: 26.8962,
+    lng: 75.7814,
+    status: "en-route",
+    speed: 51,
+    driver: "Kabir",
+    conductor: "Rajat",
+    medicalSupport: "Paramedic Neha",
+    conductorContact: "+91 9516486336",
+    medicalSupportContact: "+91 9516486337",
+    heading: 120
+  },
+  {
+    id: 3,
+    name: "AMB-03",
+    lat: 26.9423,
+    lng: 75.7719,
+    status: "dispatched",
+    speed: 48,
+    driver: "Rehan",
+    conductor: "Manav",
+    medicalSupport: "Nurse Kavya",
+    conductorContact: "+91 9516486338",
+    medicalSupportContact: "+91 9516486339",
+    heading: 204
+  },
+  {
+    id: 4,
+    name: "AMB-04",
+    lat: 26.8738,
+    lng: 75.8198,
+    status: "available",
+    speed: 41,
+    driver: "Vihaan",
+    conductor: "Rohit",
+    medicalSupport: "Paramedic Isha",
+    conductorContact: "+91 9516486340",
+    medicalSupportContact: "+91 9516486341",
+    heading: 310
+  },
+  {
+    id: 5,
+    name: "AMB-05",
+    lat: 26.9105,
+    lng: 75.7472,
+    status: "available",
+    speed: 46,
+    driver: "Ishaan",
+    conductor: "Kunal",
+    medicalSupport: "Nurse Tania",
+    conductorContact: "+91 9516486342",
+    medicalSupportContact: "+91 9516486343",
+    heading: 168
+  }
 ];
 
 export const hospitals = [

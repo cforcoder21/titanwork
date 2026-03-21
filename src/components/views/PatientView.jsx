@@ -16,6 +16,13 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function formatTimeHms(date = new Date()) {
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
 function pathLength(path) {
   if (!path || path.length < 2) return 0;
   let total = 0;
@@ -197,10 +204,16 @@ function PatientView({
     resp: "--"
   });
   const [routeProgress, setRouteProgress] = useState(0);
+  const [isPatientOnboard, setIsPatientOnboard] = useState(false);
   const [showPickupPopup, setShowPickupPopup] = useState(false);
   const [pickupPopupDurationMs, setPickupPopupDurationMs] = useState(12000);
+  const [showArrivalPopup, setShowArrivalPopup] = useState(false);
+  const [pickupNotifiedAt, setPickupNotifiedAt] = useState("");
+  const [arrivalNotifiedAt, setArrivalNotifiedAt] = useState("");
   const pickupPopupIncidentRef = useRef(null);
+  const arrivalPopupIncidentRef = useRef(null);
   const pickupPopupHideTimerRef = useRef(null);
+  const arrivalPopupHideTimerRef = useRef(null);
   const pickupSoundStopRef = useRef(null);
   const audioContextRef = useRef(null);
   const [resolvedRoute, setResolvedRoute] = useState([]);
@@ -240,6 +253,9 @@ function PatientView({
       if (pickupPopupHideTimerRef.current) {
         clearTimeout(pickupPopupHideTimerRef.current);
       }
+      if (arrivalPopupHideTimerRef.current) {
+        clearTimeout(arrivalPopupHideTimerRef.current);
+      }
       if (pickupSoundStopRef.current) {
         pickupSoundStopRef.current();
       }
@@ -252,7 +268,7 @@ function PatientView({
   );
 
   useEffect(() => {
-    const monitoringActive = routeProgress >= pickupThreshold && !!activeDispatch;
+    const monitoringActive = isPatientOnboard && !!activeDispatch;
     if (!monitoringActive) {
       setVitals({
         heartRate: "--",
@@ -263,7 +279,7 @@ function PatientView({
       return undefined;
     }
 
-    const vitalsInterval = setInterval(() => {
+    const updateVitals = () => {
       const systolic = randomInt(108, 126);
       const diastolic = randomInt(68, 84);
       setVitals({
@@ -272,10 +288,17 @@ function PatientView({
         spo2: randomInt(96, 99),
         resp: randomInt(14, 18)
       });
+    };
+
+    // Show live vitals instantly at pickup instead of waiting for first interval tick.
+    updateVitals();
+
+    const vitalsInterval = setInterval(() => {
+      updateVitals();
     }, 3000);
 
     return () => clearInterval(vitalsInterval);
-  }, [activeDispatch, routeProgress, pickupThreshold]);
+  }, [activeDispatch, isPatientOnboard]);
 
   const activeIncident = useMemo(
     () =>
@@ -314,7 +337,11 @@ function PatientView({
   useEffect(() => {
     if (!activeDispatch?.route?.length) {
       setRouteProgress(0);
+      setIsPatientOnboard(false);
       setShowPickupPopup(false);
+      setShowArrivalPopup(false);
+      setPickupNotifiedAt("");
+      setArrivalNotifiedAt("");
       setResolvedRoute([]);
       return undefined;
     }
@@ -369,6 +396,8 @@ function PatientView({
 
     if (routeProgress >= pickupThreshold && pickupPopupIncidentRef.current !== activeDispatch.incidentId) {
       pickupPopupIncidentRef.current = activeDispatch.incidentId;
+      setIsPatientOnboard(true);
+      setPickupNotifiedAt(formatTimeHms());
       const popupDurationMs = randomInt(10, 15) * 1000;
       setPickupPopupDurationMs(popupDurationMs);
       setShowPickupPopup(true);
@@ -392,10 +421,39 @@ function PatientView({
   }, [routeProgress, activeDispatch?.incidentId, pickupThreshold]);
 
   useEffect(() => {
+    if (!activeDispatch?.incidentId) return undefined;
+
+    if (routeProgress >= 1 && arrivalPopupIncidentRef.current !== activeDispatch.incidentId) {
+      arrivalPopupIncidentRef.current = activeDispatch.incidentId;
+      setArrivalNotifiedAt(formatTimeHms());
+      setShowArrivalPopup(true);
+
+      if (arrivalPopupHideTimerRef.current) {
+        clearTimeout(arrivalPopupHideTimerRef.current);
+      }
+
+      arrivalPopupHideTimerRef.current = setTimeout(() => {
+        setShowArrivalPopup(false);
+        arrivalPopupHideTimerRef.current = null;
+      }, 10000);
+    }
+
+    return undefined;
+  }, [routeProgress, activeDispatch?.incidentId]);
+
+  useEffect(() => {
     if (activeDispatch?.incidentId) return;
+    setIsPatientOnboard(false);
+    setShowArrivalPopup(false);
+    setPickupNotifiedAt("");
+    setArrivalNotifiedAt("");
     if (pickupPopupHideTimerRef.current) {
       clearTimeout(pickupPopupHideTimerRef.current);
       pickupPopupHideTimerRef.current = null;
+    }
+    if (arrivalPopupHideTimerRef.current) {
+      clearTimeout(arrivalPopupHideTimerRef.current);
+      arrivalPopupHideTimerRef.current = null;
     }
     if (pickupSoundStopRef.current) {
       pickupSoundStopRef.current();
@@ -488,7 +546,7 @@ function PatientView({
 
         <p className="text-xs text-slate-500">{locationStatus}</p>
         <p className="text-xs text-slate-500">
-          Monitoring: {routeProgress >= pickupThreshold && activeDispatch ? "ACTIVE - patient onboard" : "WAITING - starts after pickup"}
+          Monitoring: {isPatientOnboard && activeDispatch ? "ACTIVE - patient onboard" : "WAITING - starts after pickup"}
         </p>
 
         <DispatchResult dispatch={activeDispatch} remainingSeconds={remainingSeconds} />
@@ -533,12 +591,32 @@ function PatientView({
               <p className="font-display text-sm font-semibold leading-relaxed text-slate-100">
                 {activeDispatch.ambulanceId} reached the patient and is now heading to {activeDispatch.hospitalName}.
               </p>
+              <p className="mt-2 text-xs tracking-wider text-slate-400">TIME: {pickupNotifiedAt || formatTimeHms()}</p>
               <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-navy-700">
                 <div
                   className="h-full w-full origin-left bg-green-500/80"
                   style={{ animation: `pickup-countdown ${pickupPopupDurationMs}ms linear forwards` }}
                 />
               </div>
+            </div>
+          ) : null}
+
+          {showArrivalPopup && activeDispatch ? (
+            <div
+              className={`pointer-events-none absolute right-4 z-30 w-[360px] animate-slide-up rounded-2xl border border-blue-400/70 bg-navy-950/95 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md ${
+                showPickupPopup ? "top-44" : "top-4"
+              }`}
+            >
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/20 text-blue-300">
+                  <CheckCircle2 size={16} />
+                </span>
+                <p className="font-display text-[11px] font-semibold tracking-[0.2em] text-blue-300">HOSPITAL ARRIVAL CONFIRMED</p>
+              </div>
+              <p className="font-display text-sm font-semibold leading-relaxed text-slate-100">
+                Patient has reached {activeDispatch.hospitalName} and is now under treatment.
+              </p>
+              <p className="mt-2 text-xs tracking-wider text-slate-400">TIME: {arrivalNotifiedAt || formatTimeHms()}</p>
             </div>
           ) : null}
         </div>
