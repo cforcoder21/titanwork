@@ -11,6 +11,7 @@ function formatEta(seconds) {
 
 function HospitalView({ ambulances, hospitals, incidents, theme }) {
   const primaryHospital = hospitals[0];
+
   const incomingUnits = incidents.slice(0, 2).map((incident, idx) => ({
     unit: incident.assignedUnit,
     condition: incident.type.label,
@@ -33,8 +34,10 @@ function HospitalView({ ambulances, hospitals, incidents, theme }) {
   });
 
   return (
-    <div className="grid h-[calc(100vh-6.5rem)] grid-cols-20 gap-4 p-4">
-      <section className="col-span-5 flex min-h-0 flex-col rounded-xl border border-navy-700 bg-navy-800 p-5">
+    <div className="flex h-[calc(100vh-6.5rem)] gap-4 p-4">
+
+      {/* LEFT: Hospital Info */}
+      <section className="flex w-[280px] shrink-0 min-h-0 flex-col rounded-xl border border-navy-700 bg-navy-800 p-5">
         <p className="font-display text-xs tracking-widest text-red-500">HOSPITAL COMMAND</p>
         <h2 className="mt-1 font-display text-2xl font-bold text-slate-100">{primaryHospital.name}</h2>
         <p className="text-sm text-slate-500">Trauma Center - Level 1</p>
@@ -65,7 +68,8 @@ function HospitalView({ ambulances, hospitals, incidents, theme }) {
         </div>
       </section>
 
-      <section className="col-span-8 min-h-0">
+      {/* MIDDLE: Full Citywide Map */}
+      <section className="flex-1 min-h-0 min-w-0">
         <EmergencyMap
           mode="hospital"
           ambulances={ambulances}
@@ -75,11 +79,11 @@ function HospitalView({ ambulances, hospitals, incidents, theme }) {
           zoom={13}
           routeSet={routeSet}
           theme={theme}
-          showCoverage
         />
       </section>
 
-      <section className="col-span-7 flex min-h-0 flex-col rounded-xl border border-navy-700 bg-navy-800 p-5">
+      {/* RIGHT: Incident Log */}
+      <section className="flex w-[280px] shrink-0 min-h-0 flex-col rounded-xl border border-navy-700 bg-navy-800 p-5">
         <p className="mb-3 font-display text-xs tracking-widest text-slate-500">INCIDENT LOG</p>
 
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
@@ -103,6 +107,7 @@ function HospitalView({ ambulances, hospitals, incidents, theme }) {
           </div>
         </div>
       </section>
+
     </div>
   );
 }
