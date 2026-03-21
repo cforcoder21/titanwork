@@ -30,7 +30,8 @@ body {
   background: #eef4ff;
   color: #0f172a;
   font-family: "Inter", sans-serif;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: auto;
 }
 
 body.theme-dark {
@@ -140,6 +141,15 @@ body.theme-dark .leaflet-popup-tip {
   }
   to {
     width: var(--target-width);
+  }
+}
+
+@keyframes pickup-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
   }
 }
 
