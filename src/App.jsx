@@ -160,7 +160,12 @@ function App() {
         ) : null}
 
         {activeView === "driver" ? (
-          <DriverView ambulances={ambulances} activeDispatch={activeDispatch} theme={theme} />
+          <DriverView
+            ambulances={ambulances}
+            activeDispatch={activeDispatch}
+            theme={theme}
+            userPhoneNumber={phoneNumber}
+          />
         ) : null}
 
         {activeView === "hospital" ? (

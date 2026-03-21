@@ -27,7 +27,7 @@ function formatTimer(seconds) {
   return `${mins}:${secs}`;
 }
 
-function DriverView({ ambulances, activeDispatch, theme }) {
+function DriverView({ ambulances, activeDispatch, theme, userPhoneNumber }) {
   const [speed, setSpeed] = useState(52);
   const [eta, setEta] = useState(420);
   const [distance, setDistance] = useState(3.2);
@@ -81,7 +81,7 @@ function DriverView({ ambulances, activeDispatch, theme }) {
 
       {/* LEFT PANEL */}
       <div style={{
-        width: "280px",
+        width: "520px",
         flexShrink: 0,
         overflowY: "auto",
         display: "flex",
@@ -127,6 +127,9 @@ function DriverView({ ambulances, activeDispatch, theme }) {
           <p className="mt-1 text-xs text-slate-100">Patient: {missionPatient}</p>
           <p className="text-xs text-slate-400">Pickup: {missionPickup}</p>
           <p className="text-xs text-slate-300">Dest: {missionDestination}</p>
+          <p className="text-xs text-slate-400">
+            Contact: <span className="text-slate-100">{userPhoneNumber || "Not provided"}</span>
+          </p>
           <span className="mt-1 inline-block rounded-full border border-red-500 bg-red-500/20 px-2 py-0.5 font-display text-xs text-red-400">
             P1 - CRITICAL
           </span>
@@ -144,15 +147,15 @@ function DriverView({ ambulances, activeDispatch, theme }) {
 
       {/* RIGHT PANEL */}
       <div style={{
-        flex: 1,
-        minWidth: 0,
+        width: "500px",
+        flexShrink: 0,
         display: "flex",
         flexDirection: "column",
         gap: "0.75rem",
         overflow: "hidden"
       }}>
 
-        {/* Map - 58% height */}
+        {/* Map */}
         <div style={{ flex: "0 0 58%", minHeight: 0, overflow: "hidden" }}>
           <EmergencyMap
             mode="driver"
@@ -168,7 +171,7 @@ function DriverView({ ambulances, activeDispatch, theme }) {
           />
         </div>
 
-        {/* Directions - remaining height */}
+        {/* Directions */}
         <div style={{
           flex: 1,
           overflowY: "auto",
@@ -200,6 +203,7 @@ function DriverView({ ambulances, activeDispatch, theme }) {
           </div>
         </div>
       </div>
+
     </div>
   );
 }
