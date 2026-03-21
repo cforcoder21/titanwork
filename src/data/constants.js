@@ -4,7 +4,8 @@ export const EMERGENCY_TYPES = [
   { id: "cardiac", label: "Cardiac Arrest", icon: "Heart", priority: "P1" },
   { id: "trauma", label: "Severe Trauma", icon: "AlertTriangle", priority: "P2" },
   { id: "burn", label: "Burn", icon: "Flame", priority: "P2" },
-  { id: "stroke", label: "Stroke", icon: "Brain", priority: "P1" }
+  { id: "stroke", label: "Stroke", icon: "Brain", priority: "P1" },
+  { id: "other", label: "Other", icon: "AlertTriangle", priority: "P2" }
 ];
 
 export const DELHI_ADDRESSES = [

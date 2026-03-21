@@ -45,7 +45,7 @@ function App() {
   }, [activeDispatch?.incidentId]);
 
   const handleSos = (type, patientLocation) => {
-    const dispatch = triggerIncident(type, patientLocation);
+    const dispatch = triggerIncident(type, patientLocation, phoneNumber);
     setActiveDispatch(dispatch);
   };
 

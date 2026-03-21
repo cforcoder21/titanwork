@@ -197,6 +197,7 @@ function PatientView({
   sharedProgress
 }) {
   const [selectedType, setSelectedType] = useState(EMERGENCY_TYPES[0]);
+  const [customEmergency, setCustomEmergency] = useState("");
   const [patientLocation, setPatientLocation] = useState(null);
   const [locationStatus, setLocationStatus] = useState("Live location not acquired");
   const [vitals, setVitals] = useState({
@@ -499,9 +500,13 @@ function PatientView({
                 key={type.id}
                 onClick={() => setSelectedType(type)}
                 className={`relative flex items-center gap-3 rounded-lg border p-4 text-left transition-all duration-200 ${
-                  isSelected
-                    ? "border-red-500 bg-red-glow shadow-[0_0_12px_rgba(239,68,68,0.2)]"
-                    : "border-navy-600 bg-navy-700 hover:border-red-500 hover:bg-red-glow"
+                  type.id === "other" && isSelected 
+                    ? "col-span-2 border-red-500 bg-red-glow shadow-[0_0_12px_rgba(239,68,68,0.2)]" 
+                    : type.id === "other"
+                      ? "col-span-2 border-navy-600 bg-navy-700 hover:border-red-500 hover:bg-red-glow"
+                      : isSelected
+                        ? "border-red-500 bg-red-glow shadow-[0_0_12px_rgba(239,68,68,0.2)]"
+                        : "border-navy-600 bg-navy-700 hover:border-red-500 hover:bg-red-glow"
                 }`}
               >
                 <Icon
@@ -511,7 +516,7 @@ function PatientView({
                       ? "text-red-500"
                       : type.id === "stroke"
                         ? "text-violet-400"
-                        : type.id === "trauma"
+                        : type.id === "trauma" || type.id === "other"
                           ? "text-amber-500"
                           : "text-amber-400"
                   }
@@ -523,11 +528,26 @@ function PatientView({
           })}
         </div>
 
+        {selectedType.id === "other" && (
+          <div className="mt-3">
+            <textarea
+              placeholder="Please specify medical emergency details..."
+              value={customEmergency}
+              onChange={(e) => setCustomEmergency(e.target.value)}
+              rows={3}
+              className="w-full resize-none rounded-xl border border-slate-300 bg-slate-50 dark:border-navy-600 dark:bg-navy-700 p-4 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-red-500 dark:focus:border-red-500 focus:outline-none transition-colors"
+            />
+          </div>
+        )}
+
         <button
           type="button"
           onClick={() => {
             unlockAudioContext();
-            onTriggerSos(selectedType, patientLocation);
+            const emergencyToTrigger = selectedType.id === "other"
+              ? { ...selectedType, label: customEmergency || "Other Emergency" }
+              : selectedType;
+            onTriggerSos(emergencyToTrigger, patientLocation);
           }}
           className="h-14 rounded-xl bg-red-500 font-display text-lg font-bold tracking-wider text-white transition-all hover:bg-red-600 animate-sos-pulse"
         >
