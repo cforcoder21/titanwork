@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Brain, CheckCircle2, Flame, Heart, X } from "lucide-react";
+import { AlertTriangle, Brain, CheckCircle2, Flame, Heart, X, ChevronRight } from "lucide-react";
 import { DELHI_CENTER, EMERGENCY_TYPES } from "../../data/constants";
 import DispatchResult from "../ui/DispatchResult";
 import EmergencyMap from "../map/EmergencyMap";
@@ -547,19 +547,13 @@ function PatientView({
             const emergencyToTrigger = selectedType.id === "other"
               ? { ...selectedType, label: customEmergency || "Other Emergency" }
               : selectedType;
-            onTriggerSos(emergencyToTrigger, patientLocation);
+            onTriggerSos(emergencyToTrigger, userLocation);
           }}
-          className="h-14 rounded-xl bg-red-500 font-display text-lg font-bold tracking-wider text-white transition-all hover:bg-red-600 animate-sos-pulse"
+          className="group relative mb-2 mt-3 flex h-[74px] w-full items-center justify-between rounded-full bg-gradient-to-r from-fuchsia-500 to-red-500 px-8 font-display text-[20px] font-bold tracking-[0.15em] text-white shadow-[0_12px_24px_rgba(239,68,68,0.45)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_32px_rgba(239,68,68,0.6)] active:translate-y-0"
         >
-          TRIGGER SOS DISPATCH
-        </button>
-
-        <button
-          type="button"
-          onClick={acquireLocation}
-          className="h-11 rounded-xl border-2 border-sky-400/70 bg-gradient-to-r from-blue-500/25 to-cyan-500/20 font-display text-sm font-semibold tracking-[0.14em] text-sky-200 shadow-[0_8px_18px_rgba(56,189,248,0.18)] transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-300 hover:from-blue-500/35 hover:to-cyan-500/30 hover:text-white hover:shadow-[0_12px_24px_rgba(56,189,248,0.28)] active:translate-y-0"
-        >
-          USE MY LOCATION
+          <div className="w-6" />
+          <span>TRIGGER SOS DISPATCH</span>
+          <ChevronRight size={24} className="text-white/80 transition-transform duration-300 group-hover:translate-x-2" />
         </button>
 
         <p className="text-xs text-slate-500">{locationStatus}</p>
@@ -602,7 +596,7 @@ function PatientView({
             dispatchRoute={routeSegments.remaining}
             consumedDispatchRoute={routeSegments.consumed}
             trackedUnit={trackedUnit}
-            userLocation={patientLocation}
+            userLocation={userLocation}
             theme={theme}
           />
 

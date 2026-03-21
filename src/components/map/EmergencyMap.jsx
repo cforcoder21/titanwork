@@ -1,8 +1,16 @@
-import { Circle, CircleMarker, MapContainer, Polyline, Popup, TileLayer } from "react-leaflet";
+import L from "leaflet";
+import { Circle, MapContainer, Polyline, Popup, TileLayer, Marker } from "react-leaflet";
 import AmbulanceMarker from "./AmbulanceMarker";
 import HospitalMarker from "./HospitalMarker";
 import IncidentMarker from "./IncidentMarker";
 import StatChip from "../ui/StatChip";
+
+const userPinIcon = L.divIcon({
+  className: "",
+  html: '<div style="font-size: 24px; text-shadow: 0 4px 6px rgba(0,0,0,0.3); transform: translateY(-4px);">📍</div>',
+  iconSize: [24, 24],
+  iconAnchor: [12, 24],
+});
 
 function EmergencyMap({
   mode,
@@ -72,15 +80,11 @@ function EmergencyMap({
 
           {mode === "patient" && userLocation ? (
             <>
-              <CircleMarker
-                center={[userLocation.lat, userLocation.lng]}
-                radius={8}
-                pathOptions={{ color: "#1D4ED8", fillColor: "#3B82F6", fillOpacity: 0.95, weight: 2 }}
-              >
+              <Marker position={[userLocation.lat, userLocation.lng]} icon={userPinIcon}>
                 <Popup>
                   <p className="font-display text-xs font-semibold">Your Current Location</p>
                 </Popup>
-              </CircleMarker>
+              </Marker>
               <Circle
                 center={[userLocation.lat, userLocation.lng]}
                 radius={140}

@@ -168,7 +168,9 @@ function App() {
                 value={phoneNumber}
                 onChange={(event) => setPhoneNumber(event.target.value.replace(/\D/g, ""))}
                 placeholder="Enter contact number"
-                className="mt-2 w-full rounded-xl border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-slate-100 outline-none transition-colors focus:border-red-500"
+                className={`mt-2 w-full rounded-xl border bg-navy-800 px-3 py-2 text-sm text-slate-100 outline-none transition-all duration-300 focus:border-red-500 ${
+                  !isPhoneValid ? "border-blue-400/60 shadow-[0_0_12px_rgba(59,130,246,0.2)]" : "border-navy-600"
+                }`}
               />
               {isPhoneTooShort ? (
                 <p className="mt-2 text-xs text-red-400">Phone number must be exactly 10 digits.</p>
@@ -180,14 +182,29 @@ function App() {
             <button
               type="button"
               onClick={handleCaptureLocation}
-              className="mt-4 h-10 w-full rounded-xl border border-blue-500 bg-blue-500/10 font-display text-sm font-semibold tracking-wider text-blue-400 transition-colors hover:bg-blue-500/20"
+              className={`mt-4 h-10 w-full rounded-xl border font-display text-sm font-semibold tracking-wider transition-all duration-300 ${
+                isPhoneValid && !userLocation && !selectedLocationId
+                  ? "border-blue-400 bg-blue-500 text-white shadow-[0_0_24px_rgba(59,130,246,0.6)] animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite] scale-[1.03] hover:bg-blue-600"
+                  : "border-blue-500/50 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+              }`}
             >
               CAPTURE GPS LOCATION
             </button>
+            
+            <div className="my-4 flex items-center">
+              <div className="flex-1 border-t border-navy-600/60"></div>
+              <span className="px-3 font-display text-[10px] font-bold tracking-widest text-slate-500">OR</span>
+              <div className="flex-1 border-t border-navy-600/60"></div>
+            </div>
+
             <select
               value={selectedLocationId}
               onChange={(event) => setSelectedLocationId(event.target.value)}
-              className="mt-3 w-full rounded-xl border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-slate-100 outline-none transition-colors focus:border-emerald-500"
+              className={`mt-3 w-full rounded-xl border bg-navy-800 px-3 py-2 text-sm text-slate-100 outline-none transition-all duration-300 focus:border-emerald-500 ${
+                isPhoneValid && !userLocation && !selectedLocationId
+                  ? "border-emerald-400 shadow-[0_0_16px_rgba(16,185,129,0.3)] bg-emerald-900/20"
+                  : "border-navy-600"
+              }`}
             >
               <option value="">Select Other Pickup Location</option>
               {DUMMY_PICKUP_LOCATIONS.map((location) => (
@@ -199,7 +216,11 @@ function App() {
             <button
               type="button"
               onClick={handleDummyLocationSelection}
-              className="mt-2 h-10 w-full rounded-xl border border-emerald-500 bg-emerald-500/10 font-display text-sm font-semibold tracking-wider text-emerald-400 transition-colors hover:bg-emerald-500/20"
+              className={`mt-2 h-10 w-full rounded-xl border font-display text-sm font-semibold tracking-wider transition-all duration-300 ${
+                isPhoneValid && !userLocation && selectedLocationId
+                  ? "border-emerald-400 bg-emerald-500 text-white shadow-[0_0_24px_rgba(16,185,129,0.6)] animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite] scale-[1.03] hover:bg-emerald-600"
+                  : "border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+              }`}
             >
               USE SELECTED LOCATION
             </button>
@@ -213,7 +234,11 @@ function App() {
               type="button"
               onClick={handleEnterPlatform}
               disabled={!canEnterPlatform}
-              className="mt-5 h-11 w-full rounded-xl bg-red-500 font-display text-sm font-bold tracking-wider text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-navy-700 disabled:text-slate-500"
+              className={`mt-5 h-11 w-full rounded-xl font-display text-sm font-bold tracking-wider text-white transition-all duration-300 ${
+                canEnterPlatform
+                  ? "bg-red-500 hover:bg-red-600 shadow-[0_0_30px_rgba(239,68,68,0.8)] animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite] scale-[1.04]"
+                  : "cursor-not-allowed bg-navy-700 text-slate-500"
+              }`}
             >
               ENTER PLATFORM
             </button>
