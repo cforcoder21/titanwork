@@ -557,7 +557,7 @@ function PatientView({
         <button
           type="button"
           onClick={acquireLocation}
-          className="h-10 rounded-xl border border-blue-500 bg-blue-500/10 font-display text-sm font-semibold tracking-wider text-blue-400 transition-colors hover:bg-blue-500/20"
+          className="h-11 rounded-xl border-2 border-sky-400/70 bg-gradient-to-r from-blue-500/25 to-cyan-500/20 font-display text-sm font-semibold tracking-[0.14em] text-sky-200 shadow-[0_8px_18px_rgba(56,189,248,0.18)] transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-300 hover:from-blue-500/35 hover:to-cyan-500/30 hover:text-white hover:shadow-[0_12px_24px_rgba(56,189,248,0.28)] active:translate-y-0"
         >
           USE MY LOCATION
         </button>

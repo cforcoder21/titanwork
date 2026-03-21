@@ -5,7 +5,7 @@ import PatientView from "./components/views/PatientView";
 import DriverView from "./components/views/DriverView";
 import HospitalView from "./components/views/HospitalView";
 import { useSimulation } from "./hooks/useSimulation";
-import { EMERGENCY_TYPES } from "./data/constants";
+import { DUMMY_PICKUP_LOCATIONS, EMERGENCY_TYPES } from "./data/constants";
 
 const VIEW_ORDER = ["patient", "driver", "hospital"];
 
@@ -15,6 +15,7 @@ function App() {
   const [theme, setTheme] = useState("light");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [userLocation, setUserLocation] = useState(null);
+  const [selectedLocationId, setSelectedLocationId] = useState("");
   const [locationPrompt, setLocationPrompt] = useState("GPS location not captured");
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
@@ -82,11 +83,51 @@ function App() {
     );
   };
 
+  const handleDummyLocationSelection = () => {
+    const selected = DUMMY_PICKUP_LOCATIONS.find((location) => location.id === selectedLocationId);
+    if (!selected) {
+      setLocationPrompt("Select a location from the list");
+      return;
+    }
+
+    const next = { lat: selected.lat, lng: selected.lng };
+    setUserLocation(next);
+    setLocationPrompt(`Location locked: ${selected.label}`);
+  };
+
   const phoneDigits = phoneNumber.replace(/\D/g, "");
   const isPhoneTooShort = phoneDigits.length > 0 && phoneDigits.length < 10;
   const isPhoneTooLong = phoneDigits.length > 10;
   const isPhoneValid = phoneDigits.length === 10;
   const canEnterPlatform = isPhoneValid && !!userLocation;
+
+  const nearestHospitalPreview = useMemo(() => {
+    if (!userLocation || !hospitals?.length) return null;
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const haversine = (aLat, aLng, bLat, bLng) => {
+      const R = 6371;
+      const dLat = toRad(bLat - aLat);
+      const dLng = toRad(bLng - aLng);
+      const aa =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
+      return R * c;
+    };
+
+    const nearest = hospitals
+      .map((hospital) => ({
+        hospital,
+        distance: haversine(userLocation.lat, userLocation.lng, hospital.lat, hospital.lng)
+      }))
+      .sort((a, b) => a.distance - b.distance)[0];
+
+    if (!nearest) return null;
+    return {
+      name: nearest.hospital.name,
+      distanceKm: nearest.distance.toFixed(1)
+    };
+  }, [hospitals, userLocation]);
 
   const handleEnterPlatform = () => {
     if (!canEnterPlatform) return;
@@ -143,7 +184,31 @@ function App() {
             >
               CAPTURE GPS LOCATION
             </button>
+            <select
+              value={selectedLocationId}
+              onChange={(event) => setSelectedLocationId(event.target.value)}
+              className="mt-3 w-full rounded-xl border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-slate-100 outline-none transition-colors focus:border-emerald-500"
+            >
+              <option value="">Select Other Pickup Location</option>
+              {DUMMY_PICKUP_LOCATIONS.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleDummyLocationSelection}
+              className="mt-2 h-10 w-full rounded-xl border border-emerald-500 bg-emerald-500/10 font-display text-sm font-semibold tracking-wider text-emerald-400 transition-colors hover:bg-emerald-500/20"
+            >
+              USE SELECTED LOCATION
+            </button>
             <p className="mt-2 text-xs text-slate-500">{locationPrompt}</p>
+            {nearestHospitalPreview ? (
+              <p className="mt-1 text-xs text-emerald-400">
+                Nearest Hospital: {nearestHospitalPreview.name} ({nearestHospitalPreview.distanceKm} km)
+              </p>
+            ) : null}
             <button
               type="button"
               onClick={handleEnterPlatform}

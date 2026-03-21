@@ -173,7 +173,12 @@ export function createIncidentRecord(type, unitList, hospitalList, incidentId, p
     ? { lat: patientLocation.lat, lng: patientLocation.lng }
     : randomDelhiCoordinate();
   const assignedUnit = findNearestUnit(incidentCoord, unitList);
-  const hospitalSelection = findHospitalByBedAndRadius(incidentCoord, hospitalList);
+  const hospitalSelection = patientLocation
+    ? {
+        hospital: findNearestHospital(incidentCoord, hospitalList),
+        selectionBand: "nearest"
+      }
+    : findHospitalByBedAndRadius(incidentCoord, hospitalList);
   const assignedHospital = hospitalSelection.hospital;
   const etaSeconds = Math.floor(randomInRange(22, 46));
   const distance = haversineKm(incidentCoord.lat, incidentCoord.lng, assignedHospital.lat, assignedHospital.lng);
