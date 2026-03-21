@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import CapacityBar from "../ui/CapacityBar";
 import EmergencyMap from "../map/EmergencyMap";
 import TriageCard from "../ui/TriageCard";
+import HospitalListModal from "../ui/HospitalListModal";
 import { DELHI_CENTER, TRIAGE_QUEUE } from "../../data/constants";
 import { ambulances as ambulanceSeed } from "../../data/simulate";
 
@@ -190,6 +191,7 @@ function IncomingUnitCard({ patient, unit, bay, activeDispatch, patientPhone, am
 function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch, sharedProgress }) {
   const primaryHospital = hospitals[0];
   const [resolvedActiveRoute, setResolvedActiveRoute] = useState([]);
+  const [showHospitalList, setShowHospitalList] = useState(false);
 
   useEffect(() => {
     const activeRoute = activeDispatch?.route;
@@ -262,10 +264,11 @@ function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch,
       });
 
   return (
-    <div
-      className="flex gap-4 p-4 overflow-hidden"
-      style={{ height: "calc(100vh - 6.5rem)", maxHeight: "calc(100vh - 6.5rem)" }}
-    >
+    <>
+      <div
+        className="flex gap-4 p-4 overflow-hidden"
+        style={{ height: "calc(100vh - 6.5rem)", maxHeight: "calc(100vh - 6.5rem)" }}
+      >
       {/* LEFT: Hospital Command — wide */}
       <section className="flex w-[360px] shrink-0 min-h-0 flex-col rounded-xl border border-navy-700 bg-navy-800 p-5 overflow-y-auto">
         <p className="font-display text-xs tracking-widest text-red-500">HOSPITAL COMMAND</p>
@@ -278,6 +281,14 @@ function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch,
           <CapacityBar label="ER Bays" used={primaryHospital.erBays} total={5} />
           <CapacityBar label="Operating Rooms" used={1} total={3} />
         </div>
+
+        <button
+          type="button"
+          onClick={() => setShowHospitalList(true)}
+          className="mt-4 w-full rounded-lg bg-blue-600 py-2.5 font-display text-sm font-semibold tracking-wider text-white transition-all hover:bg-blue-700"
+        >
+          HOSPITAL LIST
+        </button>
 
         <div className="mt-5">
           <p className="mb-2 font-display text-xs tracking-widest text-slate-500">
@@ -343,7 +354,12 @@ function HospitalView({ ambulances, hospitals, incidents, theme, activeDispatch,
           </div>
         </div>
       </section>
-    </div>
+      </div>
+
+      {showHospitalList && (
+        <HospitalListModal hospitals={hospitals} onClose={() => setShowHospitalList(false)} />
+      )}
+    </>
   );
 }
 

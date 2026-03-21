@@ -4,6 +4,7 @@ import { DELHI_CENTER, EMERGENCY_TYPES } from "../../data/constants";
 import DispatchResult from "../ui/DispatchResult";
 import EmergencyMap from "../map/EmergencyMap";
 import VitalCard from "../ui/VitalCard";
+import HospitalListModal from "../ui/HospitalListModal";
 
 const iconMap = {
   Heart,
@@ -210,6 +211,7 @@ function PatientView({
   const [showArrivalPopup, setShowArrivalPopup] = useState(false);
   const [pickupNotifiedAt, setPickupNotifiedAt] = useState("");
   const [arrivalNotifiedAt, setArrivalNotifiedAt] = useState("");
+  const [showHospitalList, setShowHospitalList] = useState(false);
   const pickupPopupIncidentRef = useRef(null);
   const arrivalPopupIncidentRef = useRef(null);
   const pickupPopupHideTimerRef = useRef(null);
@@ -466,7 +468,8 @@ function PatientView({
   );
 
   return (
-    <div className="grid min-h-[calc(100vh-6.5rem)] grid-cols-5 gap-4 p-4">
+    <>
+      <div className="grid min-h-[calc(100vh-6.5rem)] grid-cols-5 gap-4 p-4">
       <section className="col-span-2 flex min-h-0 max-h-[calc(100vh-7.5rem)] flex-col gap-4 overflow-y-auto rounded-xl border border-navy-700 bg-navy-800 p-5">
         <div>
           <p className="font-display text-xs font-semibold tracking-widest text-red-500">PATIENT SOS</p>
@@ -548,6 +551,14 @@ function PatientView({
           <VitalCard label="SPO2" value={vitals.spo2} unit="%" colorClass="text-green-400" />
           <VitalCard label="RESP RATE" value={vitals.resp} unit="/min" colorClass="text-slate-100" />
         </div>
+
+        <button
+          type="button"
+          onClick={() => setShowHospitalList(true)}
+          className="rounded-xl bg-blue-600 py-2.5 font-display text-sm font-semibold tracking-wider text-white transition-all hover:bg-blue-700 mt-3"
+        >
+          HOSPITAL LIST
+        </button>
       </section>
 
       <section className="col-span-3 min-h-0">
@@ -607,7 +618,12 @@ function PatientView({
           ) : null}
         </div>
       </section>
-    </div>
+      </div>
+
+      {showHospitalList && (
+        <HospitalListModal hospitals={hospitals} onClose={() => setShowHospitalList(false)} />
+      )}
+    </>
   );
 }
 
