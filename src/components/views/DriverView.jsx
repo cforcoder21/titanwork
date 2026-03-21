@@ -11,14 +11,12 @@ const routeInstructions = [
 function interpolateRoute(route, progress) {
   if (!route.length) return [26.9124, 75.7873];
   if (route.length === 1) return route[0];
-
   const totalSegments = route.length - 1;
   const scaled = progress * totalSegments;
   const segment = Math.min(totalSegments - 1, Math.floor(scaled));
   const localT = scaled - segment;
   const [lat1, lng1] = route[segment];
   const [lat2, lng2] = route[segment + 1];
-
   return [lat1 + (lat2 - lat1) * localT, lng1 + (lng2 - lng1) * localT];
 }
 
@@ -39,16 +37,13 @@ function DriverView({ ambulances, activeDispatch, theme }) {
     const speedTimer = setInterval(() => {
       setSpeed((prev) => Math.max(38, Math.min(72, prev + Math.floor(Math.random() * 11) - 5)));
     }, 2000);
-
     const etaTimer = setInterval(() => {
       setEta((prev) => Math.max(0, prev - 1));
       setDistance((prev) => Math.max(0, Number((prev - 0.01).toFixed(2))));
     }, 1000);
-
     const moveTimer = setInterval(() => {
       setProgress((prev) => (prev + 0.006 > 1 ? 0 : prev + 0.006));
     }, 500);
-
     return () => {
       clearInterval(speedTimer);
       clearInterval(etaTimer);
@@ -71,91 +66,140 @@ function DriverView({ ambulances, activeDispatch, theme }) {
   const missionPatient = activeDispatch?.patientDetails || "Cardiac Arrest - Male 54";
   const missionPickup = activeDispatch?.pickupAddress || "MI Road, Jaipur";
   const missionDestination = activeDispatch?.hospitalName || "SMS Hospital Jaipur";
-
   const driverPosition = interpolateRoute(route, progress);
 
   return (
-    <div className="grid h-[calc(100vh-6.5rem)] grid-cols-20 gap-4 p-4">
-      <section className="col-span-7 flex min-h-0 flex-col rounded-xl border border-navy-700 bg-navy-800 p-5">
-        <p className="font-display text-xs tracking-widest text-red-500">DRIVER VIEW</p>
-        <div className="mt-1 flex items-center justify-between">
-          <h2 className="font-display text-2xl font-bold text-slate-100">Unit AMB-03</h2>
-          <span className="rounded-full border border-amber-500 bg-amber-500/20 px-3 py-0.5 font-display text-xs text-amber-400">
-            EN ROUTE
-          </span>
+    <div style={{
+      display: "flex",
+      width: "100%",
+      height: "calc(100vh - 108px)",
+      gap: "0.75rem",
+      padding: "0.75rem",
+      overflow: "hidden",
+      boxSizing: "border-box"
+    }}>
+
+      {/* LEFT PANEL */}
+      <div style={{
+        width: "280px",
+        flexShrink: 0,
+        overflowY: "auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.5rem",
+        boxSizing: "border-box",
+        borderRadius: "0.75rem",
+        border: "1px solid #1E293B",
+        padding: "0.875rem"
+      }} className="bg-navy-800">
+
+        <div>
+          <p className="font-display text-xs tracking-widest text-red-500">DRIVER VIEW</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px" }}>
+            <h2 className="font-display text-lg font-bold text-slate-100">Unit AMB-03</h2>
+            <span className="rounded-full border border-amber-500 bg-amber-500/20 px-2 py-0.5 font-display text-xs text-amber-400">
+              EN ROUTE
+            </span>
+          </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-navy-600 bg-navy-700 p-3">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem" }}>
+          <div className="rounded-lg border border-navy-600 bg-navy-700 p-2">
             <p className="font-display text-xs tracking-wider text-slate-500">SPEED</p>
-            <p className="font-display text-xl font-bold text-slate-100 transition-all duration-500">{speed} km/h</p>
+            <p className="font-display text-base font-bold text-slate-100">{speed} km/h</p>
           </div>
-          <div className="rounded-lg border border-navy-600 bg-navy-700 p-3">
+          <div className="rounded-lg border border-navy-600 bg-navy-700 p-2">
             <p className="font-display text-xs tracking-wider text-slate-500">ETA</p>
-            <p className="font-display text-xl font-bold text-amber-400 transition-all duration-500">{formatTimer(eta)}</p>
+            <p className="font-display text-base font-bold text-amber-400">{formatTimer(eta)}</p>
           </div>
-          <div className="rounded-lg border border-navy-600 bg-navy-700 p-3">
+          <div className="rounded-lg border border-navy-600 bg-navy-700 p-2">
             <p className="font-display text-xs tracking-wider text-slate-500">DISTANCE</p>
-            <p className="font-display text-xl font-bold text-slate-100 transition-all duration-500">{distance} km remaining</p>
+            <p className="font-display text-base font-bold text-slate-100">{distance} km</p>
           </div>
-          <div className="rounded-lg border border-navy-600 bg-navy-700 p-3">
+          <div className="rounded-lg border border-navy-600 bg-navy-700 p-2">
             <p className="font-display text-xs tracking-wider text-slate-500">STATUS</p>
-            <p className="font-display text-xl font-bold text-red-400">Code 3 - Lights & Siren</p>
+            <p className="font-display text-xs font-bold text-red-400">Code 3 Siren</p>
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-red-500/30 bg-navy-700 p-4">
+        <div className="rounded-xl border border-red-500/30 bg-navy-700 p-3">
           <p className="font-display text-xs tracking-wider text-red-500">ACTIVE MISSION</p>
-          <p className="mt-1 text-sm text-slate-100">Patient: {missionPatient}</p>
-          <p className="text-sm text-slate-400">Pickup: {missionPickup}</p>
-          <p className="text-sm text-slate-300">Destination: {missionDestination} - Trauma Bay 2</p>
-          <span className="mt-2 inline-block rounded-full border border-red-500 bg-red-500/20 px-2 py-0.5 font-display text-xs text-red-400">
+          <p className="mt-1 text-xs text-slate-100">Patient: {missionPatient}</p>
+          <p className="text-xs text-slate-400">Pickup: {missionPickup}</p>
+          <p className="text-xs text-slate-300">Dest: {missionDestination}</p>
+          <span className="mt-1 inline-block rounded-full border border-red-500 bg-red-500/20 px-2 py-0.5 font-display text-xs text-red-400">
             P1 - CRITICAL
           </span>
         </div>
 
-        <div className="mt-4 rounded-xl border border-navy-700 bg-navy-900/60 p-3">
-          {routeInstructions.map((item, idx) => (
-            <div
-              key={item.road}
-              className={`mb-2 flex items-center gap-3 rounded px-2 py-1 ${idx === 0 ? "border-l-2 border-amber-500 bg-amber-500/5" : ""}`}
-            >
-              {item.dir === "left" ? <ArrowLeft size={16} className="text-amber-400" /> : <ArrowRight size={16} className="text-amber-400" />}
-              <p className="text-sm text-slate-300">{item.road}</p>
-              <span className="ml-auto text-xs text-slate-500">{item.distance}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-auto flex gap-3 pt-4">
-          <button type="button" className="h-12 flex-1 rounded-xl bg-green-500 font-display font-bold text-white transition-colors hover:bg-green-600">
+        <div style={{ display: "flex", gap: "0.4rem", marginTop: "auto" }}>
+          <button type="button" className="h-10 flex-1 rounded-xl bg-green-500 font-display text-sm font-bold text-white hover:bg-green-600">
             ARRIVED
           </button>
-          <button
-            type="button"
-            className="h-12 flex-1 rounded-xl border border-slate-600 font-display font-bold text-slate-300 transition-colors hover:border-red-500 hover:text-red-400"
-          >
+          <button type="button" className="h-10 flex-1 rounded-xl border border-slate-600 font-display text-xs font-bold text-slate-300 hover:border-red-500 hover:text-red-400">
             CALL HOSPITAL
           </button>
         </div>
-      </section>
+      </div>
 
-      <section className="col-span-13 min-h-0">
-        <EmergencyMap
-          mode="driver"
-          ambulances={ambulances}
-          hospitals={[
-            { id: "dest", name: "SMS Hospital Jaipur", lat: 26.9056, lng: 75.8137, beds: 18, icuBeds: 4 }
-          ]}
-          incidents={[{ id: "pickup", lat: route[1][0], lng: route[1][1], type: { label: "Pickup" }, priority: "P1" }]}
-          center={driverPosition}
-          zoom={13}
-          driverRoute={route}
-          driverUnit={driverUnit}
-          driverPosition={driverPosition}
-          theme={theme}
-        />
-      </section>
+      {/* RIGHT PANEL */}
+      <div style={{
+        flex: 1,
+        minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.75rem",
+        overflow: "hidden"
+      }}>
+
+        {/* Map - 58% height */}
+        <div style={{ flex: "0 0 58%", minHeight: 0, overflow: "hidden" }}>
+          <EmergencyMap
+            mode="driver"
+            ambulances={ambulances}
+            hospitals={[{ id: "dest", name: "SMS Hospital Jaipur", lat: 26.9056, lng: 75.8137, beds: 18, icuBeds: 4 }]}
+            incidents={[{ id: "pickup", lat: route[1][0], lng: route[1][1], type: { label: "Pickup" }, priority: "P1" }]}
+            center={driverPosition}
+            zoom={13}
+            driverRoute={route}
+            driverUnit={driverUnit}
+            driverPosition={driverPosition}
+            theme={theme}
+          />
+        </div>
+
+        {/* Directions - remaining height */}
+        <div style={{
+          flex: 1,
+          overflowY: "auto",
+          minHeight: 0,
+          borderRadius: "0.75rem",
+          border: "1px solid #1E293B",
+          padding: "0.875rem"
+        }} className="bg-navy-800">
+          <p className="mb-2 font-display text-xs tracking-widest text-slate-500">TURN-BY-TURN DIRECTIONS</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            {routeInstructions.map((item, idx) => (
+              <div
+                key={item.road}
+                style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
+                className={`rounded-lg px-3 py-2 ${idx === 0 ? "border border-amber-500/40 bg-amber-500/10" : "border border-navy-600 bg-navy-700"}`}
+              >
+                <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "999px" }} className="bg-navy-600">
+                  {item.dir === "left"
+                    ? <ArrowLeft size={14} className="text-amber-400" />
+                    : <ArrowRight size={14} className="text-amber-400" />}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p className={`text-sm font-semibold ${idx === 0 ? "text-amber-300" : "text-slate-300"}`}>{item.road}</p>
+                  {idx === 0 && <p className="font-display text-xs tracking-wider text-amber-500/70">NEXT TURN</p>}
+                </div>
+                <span className="font-display text-xs text-slate-400">{item.distance}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
