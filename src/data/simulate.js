@@ -151,7 +151,8 @@ export function findHospitalByBedAndRadius(incidentCoord, hospitalList) {
   );
 
   if (primaryBand.length) {
-    return { hospital: primaryBand[0], selectionBand: "0-15km" };
+    const randomHopitalIdx = Math.floor(Math.random() * primaryBand.length);
+    return { hospital: primaryBand[randomHopitalIdx], selectionBand: "0-15km (Randomized)" };
   }
 
   const fallbackBand = hospitalsWithDistance.filter(
@@ -159,7 +160,8 @@ export function findHospitalByBedAndRadius(incidentCoord, hospitalList) {
   );
 
   if (fallbackBand.length) {
-    return { hospital: fallbackBand[0], selectionBand: "15-30km" };
+    const randomHopitalIdx = Math.floor(Math.random() * fallbackBand.length);
+    return { hospital: fallbackBand[randomHopitalIdx], selectionBand: "15-30km (Randomized)" };
   }
 
   return {
