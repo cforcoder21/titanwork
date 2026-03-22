@@ -1,5 +1,23 @@
 # Smart Emergency Response Platform 🚑
 
+## 📸 Screenshots
+
+*(You can place your actual screenshot files in an `assets/` folder and name them accordingly to render them natively on GitHub!)*
+
+### Patient Onboarding & Verification
+<img width="1919" height="1017" alt="Screenshot 2026-03-22 053040" src="https://github.com/user-attachments/assets/26938680-3baa-4967-9879-47c67f73ed3d" />
+<img width="1915" height="1016" alt="Screenshot 2026-03-22 053102" src="https://github.com/user-attachments/assets/7a9a8a0a-5a1a-491d-8807-6a38d3dc6442" />
+
+
+### Driver Active Mission UI
+
+<img width="1919" height="1017" alt="Screenshot 2026-03-22 053124" src="https://github.com/user-attachments/assets/56937aa9-92ce-4ead-b0be-7b8f098a32f3" />
+
+### Hospital Administration Dashboard
+<img width="1918" height="1019" alt="Screenshot 2026-03-22 053200" src="https://github.com/user-attachments/assets/11c95131-fe2c-41dc-8ed9-7b5bfb4cf871" />
+
+
+
 A comprehensive, real-time emergency dispatch and monitoring system built for **Hackerz Street 4.0**. This interconnected platform seamlessly links patients, ambulance drivers, and hospital administration through a unified, live-updating dashboard to drastically reduce, predict, and manage emergency response times.
 
 ---
@@ -62,15 +80,3 @@ Features a built-in simulation mode that:
 
 ---
 
-## 📸 Screenshots
-
-*(You can place your actual screenshot files in an `assets/` folder and name them accordingly to render them natively on GitHub!)*
-
-### Patient Onboarding & Verification
-![Patient Onboarding](./assets/onboarding.png)
-
-### Driver Active Mission UI
-![Driver View](./assets/driver.png)
-
-### Hospital Administration Dashboard
-![Hospital Command](./assets/hospital.png)
